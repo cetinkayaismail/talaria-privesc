@@ -579,6 +579,42 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 		g.AddEdgeWeight(xID, "goal:root", "Writable xinetd service configuration executes arbitrary command as root", 10)
 	}
 
+	// 38. Map Active Sudo Tokens & TTY Injection Hijack
+	for _, tok := range report.SudoTokens {
+		if !tok.IsDangerous {
+			continue
+		}
+		tokID := fmt.Sprintf("token:%s", tok.Vector)
+		if tok.Path != "" {
+			tokID = fmt.Sprintf("token:%s", tok.Path)
+		}
+		g.AddNode(tokID, "Credential")
+		g.AddEdgeWeight(currentUser, tokID, fmt.Sprintf("Active sudo credential or TTY injection: %s", tok.Vector), 9)
+		g.AddEdgeWeight(tokID, "goal:root", "Active sudo session ticket allows passwordless root command execution", 10)
+	}
+
+	// 39. Map Insecure Shared Memory & Tempfs SUID Delivery
+	for _, m := range report.MountResults {
+		if !m.IsDangerous {
+			continue
+		}
+		mID := fmt.Sprintf("mount:%s", m.MountPoint)
+		g.AddNode(mID, "Mount")
+		g.AddEdgeWeight(currentUser, mID, fmt.Sprintf("Insecure mount %s missing %s", m.MountPoint, m.MissingFlag), 8)
+		g.AddEdgeWeight(mID, "goal:root", fmt.Sprintf("Mount %s without %s allows SUID binary delivery and execution", m.MountPoint, m.MissingFlag), 9)
+	}
+
+	// 40. Map Unprivileged User Namespaces & SubUID
+	for _, sub := range report.SubUIDResults {
+		if !sub.IsDangerous {
+			continue
+		}
+		subID := fmt.Sprintf("userns:%s", sub.Type)
+		g.AddNode(subID, "Capability")
+		g.AddEdgeWeight(currentUser, subID, fmt.Sprintf("Unprivileged user namespace capability (%s)", sub.Reason), 8)
+		g.AddEdgeWeight(subID, "goal:root", "User namespace creation enables container escape & kernel LPE exploits", 9)
+	}
+
 	return g
 }
 

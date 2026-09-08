@@ -7,6 +7,18 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #72 — 5 New Attack Chains, Execution Trigger Tagging & MITRE ATT&CK Mapping (`core/intelligence.go`, `core/graph.go`)
+**Impact:** 🎯 +5 confirmed/potential attack chains (total: 51) + ⚡ Execution trigger categorization (`⚡ INSTANT`, `🔑 ON-LOGIN`, `⏰ SCHEDULED`) + 🧠 Conditional MITRE ATT&CK mapping (`TXXXX.YYY`)
+
+- **INTEL-01 — 5 Ground-Truth Attack Chains (`core/intelligence.go`):** Implemented and registered 5 new deterministic `AttackChain` evaluators: `SudoTokenTTYChain` (#46, active sudo session tokens and TTY command injection), `SysctlKernelExploitChain` (#47, correlation of `kernel.unprivileged_userns_clone=1` with user namespace LPE CVEs), `SubUIDNamespaceChain` (#48, unprivileged user namespace clone enablement), `NfsLocalMountChain` (#49, local fstab mounts of `no_root_squash` NFS shares), and `ShmSuidDeliveryChain` (#50, `/dev/shm` shared memory partition lacking `nosuid`). Cross-references ground truth data already gathered in `ScanReport` with 0 additional syscall/runtime overhead.
+- **INTEL-02 — Execution Trigger Tagging (`core/intelligence.go`):** Added `TriggerType` field (`"⚡ INSTANT"`, `"🔑 ON-LOGIN"`, `"⏰ SCHEDULED"`) to `ChainResult`. Integrated `enrichTriggerAndMitre()` helper providing automated fallback categorization so all 51 attack chains clearly display their execution trigger in finding details.
+- **INTEL-03 — Conditional MITRE ATT&CK Taxonomy Mapping (`core/intelligence.go`):** Added `MitreID` mapping (`T1548.003`, `T1053.003`, `T1546.004`, `T1068`, `T1611`, etc.) across all intelligence chains. Enforced conditional display: tags are presented in detailed `--audit` mode and report exports, while cleanly suppressed in `--ctf` mode to avoid visual clutter.
+- **GRAPH-01 — Intelligence Graph Goal Mappings (`core/graph.go`):** Added nodes and weighted directed edges to `BuildIntelligenceGraph()` for active sudo session tokens (`report.SudoTokens`), insecure mounts and shared memory (`report.MountResults`), and unprivileged user namespace capabilities (`report.SubUIDResults`).
+
+**Files changed:** `core/intelligence.go`, `core/graph.go`, `CHANGELOG.md`
+
+---
+
 ### #71 — Bug Fixes & Hardening for 8 New Attack Vectors (`scanners/*`, `core/*`, `cmd/*`)
 **Impact:** 🔧 Fixes false negatives in xinetd server binary auditing + 📉 eliminates root self-ownership false positives + 🎯 fixes loose process matching & duplicate reporting
 

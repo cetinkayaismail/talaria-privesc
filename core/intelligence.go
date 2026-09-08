@@ -17,6 +17,8 @@ type ChainResult struct {
 	RiskLevel   string // e.g., "100% CONFIRMED", "POTENTIAL"
 	Exploit     string
 	TargetPath  string // The core binary/file associated with the chain to check for AppArmor
+	TriggerType string // "⚡ INSTANT", "🔑 ON-LOGIN", "⏰ SCHEDULED"
+	MitreID     string // e.g. "T1548.003"
 }
 
 type AttackChain interface {
@@ -73,6 +75,11 @@ func init() {
 		&GitHookRootChain{},           // #6 Git Hook Injection on Shared Repos chain
 		&XinetdRootChain{},            // #7 Xinetd Service Configuration Hijack chain
 		&MotdProfiledChain{},          // #8 MOTD/Profile.d Login Execution chain
+		&SudoTokenTTYChain{},          // #46 Active Sudo Token & TTY Injection Hijack chain
+		&SysctlKernelExploitChain{},   // #47 User Namespace Kernel LPE Prerequisite chain
+		&SubUIDNamespaceChain{},       // #48 SubUID / SubGID User Namespace Mapping chain
+		&NfsLocalMountChain{},         // #49 NFS No-Root-Squash Local Mount chain
+		&ShmSuidDeliveryChain{},       // #50 Insecure Shared Memory / Tempfs SUID Delivery chain
 	}
 }
 
@@ -296,7 +303,126 @@ func RunIntelligenceEngine(report *models.ScanReport) {
 			details["Path"] = formattedDesc
 		}
 
+		enrichTriggerAndMitre(&res)
+
+		if res.TriggerType != "" {
+			details["Trigger"] = res.TriggerType
+		}
+		if Config.Mode == ModeAudit && res.MitreID != "" {
+			details["MITRE ATT&CK"] = res.MitreID
+		}
+
 		PrintFinding(severity, res.Name, details, res.Exploit)
+	}
+}
+
+// enrichTriggerAndMitre populates TriggerType and MitreID for chain findings if not already explicitly set.
+func enrichTriggerAndMitre(res *ChainResult) {
+	nameLower := strings.ToLower(res.Name)
+	fullLower := strings.ToLower(res.Name + " " + res.Description)
+
+	if res.TriggerType == "" {
+		switch {
+		case strings.Contains(nameLower, "cron") || strings.Contains(nameLower, "logrotate") || strings.Contains(nameLower, "timer") || strings.Contains(nameLower, "at job") || strings.Contains(nameLower, "scheduled") || strings.Contains(nameLower, "anacron") ||
+			strings.Contains(fullLower, "cron") || strings.Contains(fullLower, "logrotate") || strings.Contains(fullLower, "timer") || strings.Contains(fullLower, "at job") || strings.Contains(fullLower, "scheduled"):
+			res.TriggerType = "⏰ SCHEDULED"
+		case strings.Contains(nameLower, "login") || strings.Contains(nameLower, "pam") || strings.Contains(nameLower, "motd") || strings.Contains(nameLower, "profile") || strings.Contains(nameLower, "shell rc") || strings.Contains(nameLower, "git hook") ||
+			strings.Contains(fullLower, "pam") || strings.Contains(fullLower, "motd") || strings.Contains(fullLower, "profile") || strings.Contains(fullLower, "shell rc") || strings.Contains(fullLower, "git hook"):
+			res.TriggerType = "🔑 ON-LOGIN"
+		case strings.Contains(nameLower, "service") || strings.Contains(nameLower, "systemd") || strings.Contains(nameLower, "wildcard") || strings.Contains(nameLower, "package hook") || strings.Contains(nameLower, "virtualenv") ||
+			strings.Contains(fullLower, "service") || strings.Contains(fullLower, "systemd") || strings.Contains(fullLower, "wildcard") || strings.Contains(fullLower, "package hook") || strings.Contains(fullLower, "virtualenv"):
+			res.TriggerType = "⏰ SCHEDULED"
+		default:
+			res.TriggerType = "⚡ INSTANT"
+		}
+	}
+
+	if res.MitreID == "" {
+		// First pass: match on specific finding Name
+		switch {
+		case strings.Contains(nameLower, "motd") || strings.Contains(nameLower, "profile") || strings.Contains(nameLower, "shell rc") || strings.Contains(nameLower, "shell initialization"):
+			res.MitreID = "T1546.004"
+		case strings.Contains(nameLower, "sudo") || strings.Contains(nameLower, "sudoers"):
+			res.MitreID = "T1548.003"
+		case strings.Contains(nameLower, "cron"):
+			res.MitreID = "T1053.003"
+		case strings.Contains(nameLower, "at job") || strings.Contains(nameLower, "at daemon"):
+			res.MitreID = "T1053.002"
+		case strings.Contains(nameLower, "timer") || strings.Contains(nameLower, "systemd"):
+			res.MitreID = "T1543.002"
+		case strings.Contains(nameLower, "ssh") || strings.Contains(nameLower, "authorized_keys"):
+			res.MitreID = "T1098.004"
+		case strings.Contains(nameLower, "docker") || strings.Contains(nameLower, "lxd") || strings.Contains(nameLower, "escape") || strings.Contains(nameLower, "container"):
+			res.MitreID = "T1611"
+		case strings.Contains(nameLower, "ptrace"):
+			res.MitreID = "T1055.008"
+		case strings.Contains(nameLower, "ld_preload") || strings.Contains(nameLower, "ld.so") || strings.Contains(nameLower, "rpath") || strings.Contains(nameLower, "runpath") || strings.Contains(nameLower, "nss"):
+			res.MitreID = "T1574.006"
+		case strings.Contains(nameLower, "path"):
+			res.MitreID = "T1574.007"
+		case strings.Contains(nameLower, "shadow") || strings.Contains(nameLower, "passwd"):
+			res.MitreID = "T1003.008"
+		case strings.Contains(nameLower, "pam"):
+			res.MitreID = "T1556.004"
+		case strings.Contains(nameLower, "udev"):
+			res.MitreID = "T1546.016"
+		case strings.Contains(nameLower, "session") || strings.Contains(nameLower, "tmux") || strings.Contains(nameLower, "screen"):
+			res.MitreID = "T1563.001"
+		case strings.Contains(nameLower, "cve") || strings.Contains(nameLower, "kernel") || strings.Contains(nameLower, "namespace") || strings.Contains(nameLower, "userns"):
+			res.MitreID = "T1068"
+		case strings.Contains(nameLower, "cloud") || strings.Contains(nameLower, "token") || strings.Contains(nameLower, "secret") || strings.Contains(nameLower, "procenv"):
+			res.MitreID = "T1552"
+		case strings.Contains(nameLower, "nfs"):
+			res.MitreID = "T1136.001"
+		case strings.Contains(nameLower, "sgid") || strings.Contains(nameLower, "suid"):
+			res.MitreID = "T1548.001"
+		case strings.Contains(nameLower, "password reuse"):
+			res.MitreID = "T1078.003"
+		}
+
+		// Second pass: match on full description if name didn't resolve
+		if res.MitreID == "" {
+			switch {
+			case strings.Contains(fullLower, "motd") || strings.Contains(fullLower, "profile") || strings.Contains(fullLower, "shell rc"):
+				res.MitreID = "T1546.004"
+			case strings.Contains(fullLower, "sudo") || strings.Contains(fullLower, "sudoers"):
+				res.MitreID = "T1548.003"
+			case strings.Contains(fullLower, "cron"):
+				res.MitreID = "T1053.003"
+			case strings.Contains(fullLower, "at job") || strings.Contains(fullLower, "at daemon"):
+				res.MitreID = "T1053.002"
+			case strings.Contains(fullLower, "timer") || strings.Contains(fullLower, "systemd"):
+				res.MitreID = "T1543.002"
+			case strings.Contains(fullLower, "authorized_keys") || strings.Contains(fullLower, "id_rsa"):
+				res.MitreID = "T1098.004"
+			case strings.Contains(fullLower, "docker") || strings.Contains(fullLower, "container escape"):
+				res.MitreID = "T1611"
+			case strings.Contains(fullLower, "ptrace"):
+				res.MitreID = "T1055.008"
+			case strings.Contains(fullLower, "ld_preload") || strings.Contains(fullLower, "ld.so") || strings.Contains(fullLower, "rpath") || strings.Contains(fullLower, "nss"):
+				res.MitreID = "T1574.006"
+			case strings.Contains(fullLower, "path"):
+				res.MitreID = "T1574.007"
+			case strings.Contains(fullLower, "shadow") || strings.Contains(fullLower, "passwd"):
+				res.MitreID = "T1003.008"
+			case strings.Contains(fullLower, "pam"):
+				res.MitreID = "T1556.004"
+			case strings.Contains(fullLower, "udev"):
+				res.MitreID = "T1546.016"
+			case strings.Contains(fullLower, "tmux") || strings.Contains(fullLower, "screen"):
+				res.MitreID = "T1563.001"
+			case strings.Contains(fullLower, "cve") || strings.Contains(fullLower, "kernel") || strings.Contains(fullLower, "namespace"):
+				res.MitreID = "T1068"
+			case strings.Contains(fullLower, "cloud") || strings.Contains(fullLower, "token") || strings.Contains(fullLower, "procenv"):
+				res.MitreID = "T1552"
+			case strings.Contains(fullLower, "nfs"):
+				res.MitreID = "T1136.001"
+			case strings.Contains(fullLower, "sgid") || strings.Contains(fullLower, "suid"):
+				res.MitreID = "T1548.001"
+			default:
+				res.MitreID = "T1548"
+			}
+		}
 	}
 }
 
@@ -1634,6 +1760,8 @@ func (c *SudoersDropinChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: s.Reason,
 			Exploit:     s.ExploitHint,
 			TargetPath:  s.Path,
+			TriggerType: "⚡ INSTANT",
+			MitreID:     "T1548.003",
 		})
 	}
 	return results
@@ -1655,6 +1783,8 @@ func (c *ShellRCPoisonChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: rc.Reason,
 			Exploit:     rc.ExploitHint,
 			TargetPath:  rc.Path,
+			TriggerType: "🔑 ON-LOGIN",
+			MitreID:     "T1546.004",
 		})
 	}
 	return results
@@ -1676,6 +1806,8 @@ func (c *AtJobRootChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: at.Reason,
 			Exploit:     at.ExploitHint,
 			TargetPath:  at.Path,
+			TriggerType: "⏰ SCHEDULED",
+			MitreID:     "T1053.002",
 		})
 	}
 	return results
@@ -1697,6 +1829,8 @@ func (c *FstabMountChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: fs.Reason,
 			Exploit:     fs.ExploitHint,
 			TargetPath:  fs.MountPoint,
+			TriggerType: "⚡ INSTANT",
+			MitreID:     "T1548",
 		})
 	}
 	return results
@@ -1726,6 +1860,8 @@ func (c *SnapEscapeChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: snap.Reason,
 			Exploit:     snap.ExploitHint,
 			TargetPath:  snap.Path,
+			TriggerType: "⚡ INSTANT",
+			MitreID:     "T1548.001",
 		})
 	}
 	return results
@@ -1747,6 +1883,8 @@ func (c *GitHookRootChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: gh.Reason,
 			Exploit:     gh.ExploitHint,
 			TargetPath:  gh.HookPath,
+			TriggerType: "🔑 ON-LOGIN",
+			MitreID:     "T1546",
 		})
 	}
 	return results
@@ -1768,6 +1906,8 @@ func (c *XinetdRootChain) Evaluate(report *models.ScanReport) []ChainResult {
 			Description: x.Reason,
 			Exploit:     x.ExploitHint,
 			TargetPath:  x.ConfigFile,
+			TriggerType: "⚡ INSTANT",
+			MitreID:     "T1543.002",
 		})
 	}
 	return results
@@ -1790,6 +1930,8 @@ func (c *MotdProfiledChain) Evaluate(report *models.ScanReport) []ChainResult {
 				Description: fmt.Sprintf("Script '%s' executes with root privileges whenever an administrator logs in via SSH or console.", w.Path),
 				Exploit:     exploit,
 				TargetPath:  w.Path,
+				TriggerType: "🔑 ON-LOGIN",
+				MitreID:     "T1546.004",
 			})
 		} else if strings.Contains(w.Type, "profile.d") {
 			exploit := fmt.Sprintf("echo 'echo \"[!] compromised\"' >> %s", w.Path)
@@ -1802,6 +1944,134 @@ func (c *MotdProfiledChain) Evaluate(report *models.ScanReport) []ChainResult {
 				Description: fmt.Sprintf("Script '%s' is sourced by all interactive login shells. Modifying this script executes code under the context of any logging-in user (including root).", w.Path),
 				Exploit:     exploit,
 				TargetPath:  w.Path,
+				TriggerType: "🔑 ON-LOGIN",
+				MitreID:     "T1546.004",
+			})
+		}
+	}
+	return results
+}
+
+// ── CHAIN 46: Active Sudo Token & TTY Injection Hijack ──────
+type SudoTokenTTYChain struct{}
+
+func (c *SudoTokenTTYChain) Evaluate(report *models.ScanReport) []ChainResult {
+	var results []ChainResult
+	for _, st := range report.SudoTokens {
+		if !st.IsDangerous {
+			continue
+		}
+		results = append(results, ChainResult{
+			Name:        fmt.Sprintf("Sudo Token / TTY Hijacking: %s", st.Vector),
+			RiskLevel:   "100% CONFIRMED",
+			Description: st.Reason,
+			Exploit:     st.ExploitHint,
+			TargetPath:  st.Path,
+			TriggerType: "⚡ INSTANT",
+			MitreID:     "T1548.003",
+		})
+	}
+	return results
+}
+
+// ── CHAIN 47: Unprivileged User Namespace Kernel LPE Prerequisite ──
+type SysctlKernelExploitChain struct{}
+
+func (c *SysctlKernelExploitChain) Evaluate(report *models.ScanReport) []ChainResult {
+	var results []ChainResult
+	hasUserNS := false
+	for _, sc := range report.SysctlResults {
+		if sc.Key == "kernel.unprivileged_userns_clone" && sc.CurrentValue == "1" {
+			hasUserNS = true
+			break
+		}
+	}
+	if !hasUserNS {
+		return results
+	}
+
+	for _, vInfo := range report.Vulnerabilities {
+		if !vInfo.IsDangerous {
+			continue
+		}
+		for _, vul := range vInfo.Vulnerabilities {
+			lower := strings.ToLower(vul.Name + " " + vul.Description + " " + vul.CVE)
+			if strings.Contains(lower, "namespace") || strings.Contains(lower, "overlayfs") || strings.Contains(lower, "gameover") || strings.Contains(lower, "dirty cred") || strings.Contains(lower, "cve-2022-25636") || strings.Contains(lower, "cve-2023-0386") {
+				results = append(results, ChainResult{
+					Name:        fmt.Sprintf("Kernel Namespace LPE Actionable: %s (%s)", vul.CVE, vul.Name),
+					RiskLevel:   "100% CONFIRMED",
+					Description: fmt.Sprintf("Kernel vulnerability %s is verified actionable because kernel.unprivileged_userns_clone=1 permits unprivileged namespace creation required for exploitation.", vul.CVE),
+					Exploit:     vul.ExploitHint,
+					TriggerType: "⚡ INSTANT",
+					MitreID:     "T1068",
+				})
+			}
+		}
+	}
+	return results
+}
+
+// ── CHAIN 48: SubUID / SubGID User Namespace Mapping ────────
+type SubUIDNamespaceChain struct{}
+
+func (c *SubUIDNamespaceChain) Evaluate(report *models.ScanReport) []ChainResult {
+	var results []ChainResult
+	for _, sub := range report.SubUIDResults {
+		if sub.IsDangerous && sub.Type == "sysctl" {
+			results = append(results, ChainResult{
+				Name:        "Unprivileged User Namespace Clone Enabled",
+				RiskLevel:   "POTENTIAL",
+				Description: sub.Reason,
+				Exploit:     sub.ExploitHint,
+				TriggerType: "⚡ INSTANT",
+				MitreID:     "T1068",
+			})
+		}
+	}
+	return results
+}
+
+// ── CHAIN 49: NFS No-Root-Squash Local Mount Correlation ────
+type NfsLocalMountChain struct{}
+
+func (c *NfsLocalMountChain) Evaluate(report *models.ScanReport) []ChainResult {
+	var results []ChainResult
+	for _, nfs := range report.NFSExports {
+		if !nfs.HasNoRootSquash {
+			continue
+		}
+		for _, fs := range report.Fstab {
+			if strings.Contains(fs.FSType, "nfs") && (fs.Device == nfs.Path || strings.HasSuffix(fs.Device, nfs.Path)) {
+				results = append(results, ChainResult{
+					Name:        fmt.Sprintf("NFS no_root_squash Export Locally Mounted: %s -> %s", nfs.Path, fs.MountPoint),
+					RiskLevel:   "100% CONFIRMED",
+					Description: fmt.Sprintf("NFS export '%s' (no_root_squash) is mounted locally at '%s'. Remote mount is not required — unprivileged users can deploy SUID binaries via local mount if permissions permit.", nfs.Path, fs.MountPoint),
+					Exploit:     fmt.Sprintf("cp /bin/bash %s/rootshell && chmod +s %s/rootshell", fs.MountPoint, fs.MountPoint),
+					TargetPath:  fs.MountPoint,
+					TriggerType: "⚡ INSTANT",
+					MitreID:     "T1136.001",
+				})
+			}
+		}
+	}
+	return results
+}
+
+// ── CHAIN 50: Insecure Shared Memory / Tempfs SUID Delivery ─
+type ShmSuidDeliveryChain struct{}
+
+func (c *ShmSuidDeliveryChain) Evaluate(report *models.ScanReport) []ChainResult {
+	var results []ChainResult
+	for _, m := range report.MountResults {
+		if m.IsDangerous && m.MountPoint == "/dev/shm" && strings.Contains(m.MissingFlag, "nosuid") {
+			results = append(results, ChainResult{
+				Name:        "Insecure Shared Memory Partition Allows SUID Execution: /dev/shm",
+				RiskLevel:   "POTENTIAL",
+				Description: "The /dev/shm shared memory partition is mounted without 'nosuid' and is world-writable by default. Any SUID binary written or linked here will execute with elevated privileges.",
+				Exploit:     "cp /tmp/suid_payload /dev/shm/payload && /dev/shm/payload",
+				TargetPath:  m.MountPoint,
+				TriggerType: "⚡ INSTANT",
+				MitreID:     "T1548.001",
 			})
 		}
 	}
