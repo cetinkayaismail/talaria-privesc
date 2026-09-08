@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #73 — Lab Verification Suite & SubUID/Sysctl Chain Matching Hardening (`core/intelligence.go`)
+**Impact:** 🧪 End-to-end Docker testbed verification for all 5 new attack chains (100% pass rate) + 🔧 SubUID/SubGID allocation & dual sysctl source correlation
+
+- **BUG-FIX — SubUID & Sysctl Source Correlation (`core/intelligence.go`):** In `SubUIDNamespaceChain`, expanded type matching from `"sysctl"` to include `"userns_unprivileged_enabled"`, `"subuid_allocation"`, and `"subgid_allocation"`, ensuring both kernel sysctl flags and per-user namespace mappings trigger findings with actionable exploit hints (`unshare -U -m -r`). In `SysctlKernelExploitChain`, added dual-source user namespace detection inspecting both `report.SysctlResults` and `report.SubUIDResults`.
+- **LAB-TEST — Automated Docker Test Suite (`lab/test_new_chains.py`):** Created an end-to-end verification script testing Chains 46–50 in isolated Docker containers (`talaria-lab:latest`). Validated that SudoTokenTTY, SubUIDNamespace, NfsLocalMount, and ShmSuidDelivery trigger reliably, output correct execution trigger tags, and conditionally display MITRE ATT&CK IDs in `--audit` mode while suppressing them in `--ctf` mode.
+
+**Files changed:** `core/intelligence.go`, `CHANGELOG.md`
+
+---
+
 ### #72 — 5 New Attack Chains, Execution Trigger Tagging & MITRE ATT&CK Mapping (`core/intelligence.go`, `core/graph.go`)
 **Impact:** 🎯 +5 confirmed/potential attack chains (total: 51) + ⚡ Execution trigger categorization (`⚡ INSTANT`, `🔑 ON-LOGIN`, `⏰ SCHEDULED`) + 🧠 Conditional MITRE ATT&CK mapping (`TXXXX.YYY`)
 

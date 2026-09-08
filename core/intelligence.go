@@ -1987,6 +1987,14 @@ func (c *SysctlKernelExploitChain) Evaluate(report *models.ScanReport) []ChainRe
 		}
 	}
 	if !hasUserNS {
+		for _, sub := range report.SubUIDResults {
+			if sub.IsDangerous && (sub.Type == "userns_unprivileged_enabled" || sub.Type == "sysctl") {
+				hasUserNS = true
+				break
+			}
+		}
+	}
+	if !hasUserNS {
 		return results
 	}
 
@@ -2017,12 +2025,20 @@ type SubUIDNamespaceChain struct{}
 func (c *SubUIDNamespaceChain) Evaluate(report *models.ScanReport) []ChainResult {
 	var results []ChainResult
 	for _, sub := range report.SubUIDResults {
-		if sub.IsDangerous && sub.Type == "sysctl" {
+		if sub.IsDangerous && (sub.Type == "userns_unprivileged_enabled" || sub.Type == "sysctl" || strings.Contains(sub.Type, "subuid") || strings.Contains(sub.Type, "subgid")) {
+			name := "Unprivileged User Namespace Clone Enabled"
+			if strings.Contains(sub.Type, "subuid") || strings.Contains(sub.Type, "subgid") {
+				name = fmt.Sprintf("SubUID/SubGID User Namespace Mapping: %s", sub.TargetUser)
+			}
+			exploit := sub.ExploitHint
+			if exploit == "" {
+				exploit = "unshare -U -m -r"
+			}
 			results = append(results, ChainResult{
-				Name:        "Unprivileged User Namespace Clone Enabled",
+				Name:        name,
 				RiskLevel:   "POTENTIAL",
 				Description: sub.Reason,
-				Exploit:     sub.ExploitHint,
+				Exploit:     exploit,
 				TriggerType: "⚡ INSTANT",
 				MitreID:     "T1068",
 			})
