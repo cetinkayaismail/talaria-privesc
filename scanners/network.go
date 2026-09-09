@@ -352,11 +352,6 @@ func parseAddr(hexStr string, protocol string) (string, int) {
 	return net.IP(ipHex).String(), int(port)
 }
 
-// isLocal checks if the address is a loopback or "any" interface
-func isLocal(addr string) bool {
-	return addr == "127.0.0.1" || addr == "::1" || addr == "0.0.0.0" || addr == "::"
-}
-
 // getConnectionState maps the hex state code from /proc/net/tcp to a human-readable string
 func getConnectionState(stateHex string) string {
 	states := map[string]string{

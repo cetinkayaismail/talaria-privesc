@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -710,24 +709,6 @@ func calculateEntropy(s string) float64 {
 	return entropy
 }
 
-// isLikelyConfig returns true if the file extension or name suggests it's a config
-func isLikelyConfig(path string) bool {
-	fileName := strings.ToLower(filepath.Base(path))
-	configExts := []string{".conf", ".config", ".yaml", ".yml", ".json", ".xml", ".ini", ".inf", ".txt", ".sh", ".ovpn", ".cnf"}
-	for _, ext := range configExts {
-		if strings.HasSuffix(fileName, ext) {
-			return true
-		}
-	}
-	configNames := []string{"config", "settings", "credentials", "auth", "secret"}
-	for _, name := range configNames {
-		if strings.Contains(fileName, name) {
-			return true
-		}
-	}
-	return false
-}
-
 // isBinary checks filename extension for known binary types
 func isBinary(name string) bool {
 	ext := filepath.Ext(name)
@@ -766,25 +747,3 @@ func isBinaryContent(data []byte) bool {
 	}
 	return false
 }
-
-// isBinaryBytes is kept for backward compatibility but calls isBinaryContent
-func isBinaryBytes(data []byte) bool {
-	return isBinaryContent(data)
-}
-
-// --- Unused but kept for backward compat ---
-func scanFileContent(path string, keywords []string) string {
-	_ = keywords
-	f, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-	return genericContentScan(f, path)
-}
-
-// scanBasicLine is kept to satisfy old callers
-func scanBasicLine(_ string) string { return "" }
-
-// intStr is a tiny helper used by analyzeAuthTxt
-func intStr(i int) string { return strconv.Itoa(i) }

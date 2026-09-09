@@ -119,8 +119,8 @@ func PrintUsage() {
 	fmt.Println("  secrets, suid, sgid, sudo, capabilities, cronjobs, processes, ptrace, nfs,")
 	fmt.Println("  network, writeable, sockets, filepermissions, filepermsexploit, groups,")
 	fmt.Println("  pathhijack, sshkeys, vulnerabilities, container, dbus, services, packages,")
-	fmt.Println("  sessions, kernelconfig, polkit, environmentfile, pam, sysctl, systemdoverrides,")
+	fmt.Println("  sessions, kernelconfig, polkit, history, environmentfile, pam, sysctl, systemdoverrides,")
 	fmt.Println("  subuid, mounts, elfrpath, auditd, udev, crondirs, procenv, ldnss, modprobe,")
-	fmt.Println("  cloudmeta, venvwrap, sudokens, wildcards, python_hijack, initscripts, logrotate,")
+	fmt.Println("  cloudmeta, venvwrap, sudotokens, wildcards, python_hijack, initscripts, logrotate,")
 	fmt.Println("  sudoers_dropin, shell_rc, at_jobs, fstab, snap_audit, git_hooks, xinetd")
 }

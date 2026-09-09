@@ -188,53 +188,6 @@ func renderFindingLocked(severity string, title string, details map[string]strin
 	}
 }
 
-// SectionFinding holds an in-memory finding item for batch flushing.
-type SectionFinding struct {
-	Severity string
-	Title    string
-	Details  map[string]string
-	Exploit  string
-}
-
-// SectionBuffer buffers section headers and findings to output them atomically,
-// preventing concurrent scanners from interleaving their output on stdout.
-type SectionBuffer struct {
-	Title    string
-	Findings []SectionFinding
-}
-
-// NewSectionBuffer creates a new in-memory section buffer.
-func NewSectionBuffer(title string) *SectionBuffer {
-	return &SectionBuffer{
-		Title:    title,
-		Findings: make([]SectionFinding, 0),
-	}
-}
-
-// AddFinding queues a finding into the section buffer.
-func (sb *SectionBuffer) AddFinding(severity string, title string, details map[string]string, exploit string) {
-	sb.Findings = append(sb.Findings, SectionFinding{
-		Severity: severity,
-		Title:    title,
-		Details:  details,
-		Exploit:  exploit,
-	})
-}
-
-// Flush atomically renders the section header and all queued findings under a single mutex lock.
-func (sb *SectionBuffer) Flush() {
-	if len(sb.Findings) == 0 {
-		return
-	}
-	printMu.Lock()
-	defer printMu.Unlock()
-
-	renderSectionHeaderLocked(sb.Title)
-	for _, f := range sb.Findings {
-		renderFindingLocked(f.Severity, f.Title, f.Details, f.Exploit)
-	}
-}
-
 // PrintSummary displays the final scan outcome
 func PrintSummary(report *models.ScanReport, duration string) {
 	printMu.Lock()
@@ -290,12 +243,12 @@ func PrintSummary(report *models.ScanReport, duration string) {
 			critical++
 		}
 	}
-	for _, s := range report.Writeable {
-		if s.RiskLevel == "CRITICAL" {
+	for _, w := range report.Writeable {
+		if w.RiskLevel == "CRITICAL" {
 			critical++
-		} else if s.RiskLevel == "HIGH" {
+		} else if w.RiskLevel == "HIGH" {
 			high++
-		} else if s.RiskLevel == "MEDIUM" {
+		} else if w.RiskLevel == "MEDIUM" {
 			medium++
 		}
 	}
@@ -343,6 +296,131 @@ func PrintSummary(report *models.ScanReport, duration string) {
 	}
 	for _, s := range report.NetworkConnections {
 		countRisk(s.RiskLevel)
+	}
+	for _, n := range report.NFSExports {
+		if n.HasNoRootSquash {
+			critical++
+		} else {
+			countRisk(n.RiskSummary)
+		}
+	}
+	for _, p := range report.Processes {
+		if p.IsDangerous {
+			critical++
+		}
+	}
+	for _, s := range report.Sockets {
+		if s.IsDangerous {
+			critical++
+		}
+	}
+	for _, g := range report.Groups {
+		if g.IsDangerous {
+			critical++
+		}
+	}
+	if report.PtraceScope != nil && report.PtraceScope.IsDangerous {
+		critical++
+	}
+	for _, s := range report.Services {
+		if s.IsDangerous {
+			critical++
+		}
+	}
+	for _, p := range report.Packages {
+		if p.IsDangerous {
+			countRisk(p.RiskLevel)
+		}
+	}
+	for _, p := range report.PolkitRules {
+		if p.IsDangerous {
+			critical++
+		}
+	}
+	for _, x := range report.XAuthority {
+		if x.IsDangerous {
+			critical++
+		}
+	}
+	for _, p := range report.PAMResults {
+		if p.IsDangerous {
+			countRisk(p.RiskLevel)
+		}
+	}
+	for _, s := range report.SysctlResults {
+		if s.IsDangerous {
+			countRisk(s.RiskLevel)
+		}
+	}
+	for _, s := range report.SystemdOverrides {
+		if s.IsDangerous {
+			countRisk(s.RiskLevel)
+		}
+	}
+	for _, s := range report.SubUIDResults {
+		if s.IsDangerous {
+			countRisk(s.RiskLevel)
+		}
+	}
+	for _, m := range report.MountResults {
+		if m.IsDangerous {
+			countRisk(m.RiskLevel)
+		}
+	}
+	for _, e := range report.ELFRPathResults {
+		if e.IsDangerous {
+			countRisk(e.RiskLevel)
+		}
+	}
+	for _, a := range report.AuditdResults {
+		if a.IsDangerous {
+			countRisk(a.RiskLevel)
+		}
+	}
+	for _, u := range report.UdevResults {
+		if u.IsDangerous {
+			countRisk(u.RiskLevel)
+		}
+	}
+	for _, d := range report.CronDirResults {
+		if d.IsDangerous {
+			countRisk(d.RiskLevel)
+		}
+	}
+	for _, p := range report.ProcEnvResults {
+		if p.IsDangerous {
+			countRisk(p.RiskLevel)
+		}
+	}
+	for _, l := range report.LDNSSResults {
+		if l.IsDangerous {
+			countRisk(l.RiskLevel)
+		}
+	}
+	for _, m := range report.ModprobeResults {
+		if m.IsDangerous {
+			countRisk(m.RiskLevel)
+		}
+	}
+	for _, c := range report.CloudMetaResults {
+		if c.IsDangerous {
+			countRisk(c.RiskLevel)
+		}
+	}
+	for _, v := range report.VenvWrapResults {
+		if v.IsDangerous {
+			countRisk(v.RiskLevel)
+		}
+	}
+	for _, w := range report.Wildcards {
+		if w.IsDangerous {
+			countRisk(w.RiskLevel)
+		}
+	}
+	for _, p := range report.PythonHijack {
+		if p.IsDangerous {
+			countRisk(p.RiskLevel)
+		}
 	}
 	for _, s := range report.FilePermissions {
 		if s.IsDangerous {

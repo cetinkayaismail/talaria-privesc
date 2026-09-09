@@ -36,18 +36,9 @@ var privateKeyNames = []string{
 func ScanSSHKeys() ([]SSHKeyResult, error) {
 	var results []SSHKeyResult
 
-	currUser, err := user.Current()
-	if err != nil {
-		return results, err
-	}
-	currentUID, _ := strconv.Atoi(currUser.Uid)
-
-	gidStrings, _ := currUser.GroupIds()
-	userGids := make(map[int]bool)
-	for _, g := range gidStrings {
-		id, _ := strconv.Atoi(g)
-		userGids[id] = true
-	}
+	userCtx := GetUserContext()
+	currentUID := userCtx.UID
+	userGids := userCtx.GIDs
 
 	// --- Build candidate .ssh directories ---
 	// Include /root/.ssh and all /home/*/.ssh directories

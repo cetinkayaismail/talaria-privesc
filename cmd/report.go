@@ -790,6 +790,11 @@ func countFindingsBySeverity(report *models.ScanReport) (int, int, int) {
 	for _, s := range report.Secrets {
 		addSeverity(s.RiskLevel)
 	}
+	for _, p := range report.Processes {
+		if p.IsDangerous {
+			critical++
+		}
+	}
 	for _, s := range report.SUID {
 		if s.IsDangerous {
 			critical++

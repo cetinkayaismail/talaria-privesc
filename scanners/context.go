@@ -33,7 +33,17 @@ func InitUserContext() {
 	userCtxOnce.Do(func() {
 		u, err := user.Current()
 		if err != nil {
-			cachedUserCtx = &UserContext{GIDs: make(map[int]bool)}
+			gids := make(map[int]bool)
+			if rawGids, gErr := os.Getgroups(); gErr == nil {
+				for _, g := range rawGids {
+					gids[g] = true
+				}
+			}
+			cachedUserCtx = &UserContext{
+				UID:  os.Getuid(),
+				GID:  os.Getgid(),
+				GIDs: gids,
+			}
 			return
 		}
 		uid, _ := strconv.Atoi(u.Uid)

@@ -1,8 +1,6 @@
 package scanners
 
 import (
-	"bufio"
-	"io"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -109,38 +107,6 @@ func ScanProcesses() ([]ProcessResult, error) {
 	return results, nil
 }
 
-// getProcessUID parses the status file for the effective UID
-func getProcessUID(pid string) (int, error) {
-	file, err := os.Open(filepath.Join("/proc", pid, "status"))
-	if err != nil {
-		return 0, err
-	}
-	defer file.Close() // Manual close within function scope
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "Uid:") {
-			fields := strings.Fields(line)
-			if len(fields) >= 2 {
-				return strconv.Atoi(fields[1])
-			}
-		}
-	}
-	return 0, io.EOF
-}
-
-// getProcessCmdline reads the command line arguments
-func getProcessCmdline(pid string) (string, error) {
-	data, err := os.ReadFile(filepath.Join("/proc", pid, "cmdline"))
-	if err != nil {
-		return "", err
-	}
-	// cmdline arguments are null-byte separated
-	cmd := strings.ReplaceAll(string(data), "\x00", " ")
-	return strings.TrimSpace(cmd), nil
-}
-
 // lookupUsername converts UID to a human-readable name
 func lookupUsername(uid int) string {
 	if u, err := user.LookupId(strconv.Itoa(uid)); err == nil {
@@ -232,15 +198,6 @@ func ScanPtraceScope() (*PtraceScopeResult, error) {
 		reason = "ptrace_scope=3: ptrace fully disabled"
 	}
 	return &PtraceScopeResult{Scope: val, IsDangerous: isDangerous, Reason: reason}, nil
-}
-
-// getProcessEnviron reads the environment variables of a process and flags sensitive keys.
-func getProcessEnviron(pid string) ([]string, error) {
-	data, err := os.ReadFile(filepath.Join("/proc", pid, "environ"))
-	if err != nil {
-		return nil, err // Gracefully return error (EACCES etc.)
-	}
-	return parseEnviron(data), nil
 }
 
 // parseEnviron parses environ bytes into sensitive findings.

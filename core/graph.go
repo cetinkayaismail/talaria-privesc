@@ -615,6 +615,131 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 		g.AddEdgeWeight(subID, "goal:root", "User namespace creation enables container escape & kernel LPE exploits", 9)
 	}
 
+	// 41. Map High-Reliability Kernel & Software Vulnerabilities
+	for _, v := range report.Vulnerabilities {
+		if !v.IsDangerous {
+			continue
+		}
+		for _, sub := range v.Vulnerabilities {
+			if sub.PatchStatus == "likely_patched" {
+				continue
+			}
+			cveID := fmt.Sprintf("cve:%s", sub.Name)
+			g.AddNode(cveID, "Vulnerability")
+			g.AddEdgeWeight(currentUser, cveID, fmt.Sprintf("High-reliability exploit: %s (%s)", sub.Name, sub.Description), 9)
+			g.AddEdgeWeight(cveID, "goal:root", fmt.Sprintf("Exploiting %s yields immediate root privileges", sub.Name), 10)
+		}
+	}
+
+	// 42. Map Container Escape Vectors
+	for _, c := range report.ContainerEscape {
+		if !c.IsDangerous {
+			continue
+		}
+		escID := fmt.Sprintf("container:%s", c.Vector)
+		g.AddNode(escID, "Container")
+		g.AddEdgeWeight(currentUser, escID, fmt.Sprintf("Container breakout vector: %s", c.Reason), 9)
+		g.AddEdgeWeight(escID, "goal:root", "Container escape yields host root execution", 10)
+	}
+
+	// 43. Map Dangerous SGID Binaries
+	for _, sg := range report.SGID {
+		if !sg.IsDangerous {
+			continue
+		}
+		sgID := fmt.Sprintf("sgid:%s", sg.Path)
+		g.AddNode(sgID, "Binary")
+		g.AddEdgeWeight(currentUser, sgID, fmt.Sprintf("SGID binary %s", sg.Path), 8)
+		if strings.Contains(strings.ToLower(sg.OwnerGroup), "shadow") {
+			g.AddEdgeWeight(sgID, "goal:shadow", "SGID shadow binary allows cracking password hashes", 8)
+		} else if strings.Contains(strings.ToLower(sg.OwnerGroup), "disk") {
+			g.AddEdgeWeight(sgID, "goal:root", "SGID disk binary allows raw block device write", 9)
+		} else {
+			g.AddEdgeWeight(sgID, "goal:root", fmt.Sprintf("SGID binary executes with group %s permissions", sg.OwnerGroup), 7)
+		}
+	}
+
+	// 44. Map Systemd Timers
+	for _, t := range report.SystemdTimers {
+		if !t.IsDangerous {
+			continue
+		}
+		timerID := fmt.Sprintf("timer:%s", t.Path)
+		g.AddNode(timerID, "Timer")
+		g.AddEdgeWeight(currentUser, timerID, fmt.Sprintf("Writable systemd timer/service: %s", t.ServiceName), 9)
+		g.AddEdgeWeight(timerID, "goal:root", "Systemd timer executes modified service unit as root", 10)
+	}
+
+	// 45. Map Writable Logrotate Entries
+	for _, l := range report.Logrotate {
+		if !l.IsWritable && len(l.PostrotatePaths) == 0 && l.RiskLevel != "CRITICAL" {
+			continue
+		}
+		logID := fmt.Sprintf("logrotate:%s", l.ConfigPath)
+		g.AddNode(logID, "Logrotate")
+		g.AddEdgeWeight(currentUser, logID, fmt.Sprintf("Writable logrotate entry: %s", l.ConfigPath), 9)
+		g.AddEdgeWeight(logID, "goal:root", "Logrotate daily/hourly execution triggers arbitrary command execution as root", 9)
+	}
+
+	// 46. Map D-Bus Policy Bypasses
+	for _, d := range report.DBusPolicy {
+		if !d.IsDangerous {
+			continue
+		}
+		dbusID := fmt.Sprintf("dbus:%s", d.ServiceName)
+		g.AddNode(dbusID, "DBus")
+		g.AddEdgeWeight(currentUser, dbusID, fmt.Sprintf("Unauthenticated D-Bus service: %s", d.ServiceName), 9)
+		g.AddEdgeWeight(dbusID, "goal:root", "Invoking privileged D-Bus method enables root code execution", 9)
+	}
+
+	// 47. Map History & Sensitive Secrets
+	for _, h := range report.HistorySecrets {
+		if strings.EqualFold(h.RiskLevel, "CRITICAL") {
+			histID := fmt.Sprintf("secret:history:%d", h.LineNumber)
+			g.AddNode(histID, "Credential")
+			g.AddEdgeWeight(currentUser, histID, fmt.Sprintf("Discovered credential in %s", h.HistoryFile), 9)
+			g.AddEdgeWeight(histID, "goal:root", "Leaked root/sudo credential in shell history", 9)
+		}
+	}
+	for _, s := range report.Secrets {
+		if strings.EqualFold(s.RiskLevel, "CRITICAL") && (strings.Contains(s.Path, "id_rsa") || strings.Contains(s.Path, "root")) {
+			secID := fmt.Sprintf("file:%s", s.Path)
+			g.AddNode(secID, "Credential")
+			g.AddEdgeWeight(currentUser, secID, fmt.Sprintf("Sensitive key or credential file: %s", s.Path), 9)
+			g.AddEdgeWeight(secID, "goal:root", "Readable private key or admin credentials", 9)
+		}
+	}
+
+	// 48. Map X11 Session Hijack
+	for _, x := range report.XAuthority {
+		if !x.IsDangerous {
+			continue
+		}
+		xID := fmt.Sprintf("x11:%s", x.TargetUser)
+		g.AddNode(xID, "Session")
+		g.AddEdgeWeight(currentUser, xID, fmt.Sprintf("Readable .Xauthority for user %s", x.TargetUser), 8)
+		g.AddEdgeWeight(xID, "goal:root", "X11 session hijacking enables keystroke injection and command execution as target user", 9)
+	}
+
+	// 49. Map Ptrace Memory Injection
+	if report.PtraceScope != nil && report.PtraceScope.IsDangerous {
+		ptID := "ptrace:scope0"
+		g.AddNode(ptID, "Process")
+		g.AddEdgeWeight(currentUser, ptID, "ptrace_scope=0 allows cross-process shellcode injection", 8)
+		g.AddEdgeWeight(ptID, "goal:root", "Process injection into running root service", 9)
+	}
+
+	// 50. Map File Permissions Exploit
+	for _, f := range report.FilePermsExploit {
+		if !f.IsDangerous {
+			continue
+		}
+		fID := fmt.Sprintf("exploit:%s", f.Path)
+		g.AddNode(fID, "Exploit")
+		g.AddEdgeWeight(currentUser, fID, fmt.Sprintf("Relative binary/script hijack: %s", f.Path), 9)
+		g.AddEdgeWeight(fID, "goal:root", "Execution of hijacked binary path yields root", 10)
+	}
+
 	return g
 }
 

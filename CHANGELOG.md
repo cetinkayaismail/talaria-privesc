@@ -7,6 +7,19 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #74 — Bug Fixes, Dead Code Pruning, UserContext Hardening & Attack Graph Expansion (`core/*`, `scanners/*`, `cmd/*`)
+**Impact:** 🔧 Critical fix for live terminal summary undercounting across 25 scanner modules + 🛡️ nil pointer dereference panic hardening on minimal containers + ⚡ dead code pruning across 6 subsystems + 🎯 10 new attack vectors wired into the weighted directed attack graph
+
+- **BUG-FIX — Terminal Summary Undercounting (`core/reporting.go`, `cmd/report.go`):** Resolved critical undercounting bug where `PrintSummary()` omitted 25 scanner fields (`NFSExports`, `Processes`, `Sockets`, `Groups`, `PtraceScope`, `Services`, `Packages`, `PolkitRules`, `XAuthority`, `PAMResults`, `SysctlResults`, `SystemdOverrides`, `SubUIDResults`, `MountResults`, `ELFRPathResults`, `AuditdResults`, `UdevResults`, `CronDirResults`, `ProcEnvResults`, `LDNSSResults`, `ModprobeResults`, `CloudMetaResults`, `VenvWrapResults`, `Wildcards`, `PythonHijack`). Summary cards and `--ui` dashboards now accurately reflect all critical, high, and medium severity findings discovered by all 55 scanners. Updated `cmd/report.go:countFindingsBySeverity()` to track `report.Processes` for CI/CD `--fail-on` evaluation.
+- **SEC-FIX — Nil Pointer Dereference Hardening (`scanners/cronjobs.go`, `scanners/fileperms_exploit.go`, `scanners/ssh_keys.go`, `scanners/groups.go`, `scanners/context.go`):** Replaced unhandled `user.Current()` lookups with cached, panic-safe `GetUserContext()`. Added syscall-level fallback via `os.Getuid()`, `os.Getgid()`, and `os.Getgroups()` when executing in minimal Docker/chroot environments without `/etc/passwd` or `/etc/group`.
+- **CLEANUP — Dead Code Pruning (`scanners/cronjobs.go`, `scanners/writeable.go`, `scanners/processes.go`, `scanners/network.go`, `scanners/secrets.go`, `core/reporting.go`):** Pruned obsolete and unreachable code: `ScanAtJobs()` in `cronjobs.go` (superseded by dedicated `at_jobs.go`), `ScanUdevRules()` in `writeable.go` (superseded by `udev.go`), `/proc` reading helpers `getProcessUID`, `getProcessCmdline`, `getProcessEnviron` in `processes.go` (superseded by unified `proc_snapshot.go`), `isLocal()` in `network.go`, dead shims in `secrets.go` (`isLikelyConfig`, `isBinaryBytes`, `scanFileContent`, `scanBasicLine`, `intStr`), and uncalled `SectionBuffer` in `reporting.go`.
+- **GRAPH-02 — 10 New Attack Graph Mappers (`core/graph.go`):** Expanded `BuildIntelligenceGraph()` to construct weighted directed nodes and edges for 10 previously unmapped scanner outputs: high-reliability CVEs (`report.Vulnerabilities`), container breakouts (`report.ContainerEscape`), dangerous SGID binaries (`report.SGID`), writable systemd timers (`report.SystemdTimers`), writable logrotate configs (`report.Logrotate`), root D-Bus methods (`report.DBusPolicy`), history credentials (`report.HistorySecrets`), sensitive keys (`report.Secrets`), cross-process ptrace memory injection (`report.PtraceScope`), and relative PATH hijacks (`report.FilePermsExploit`).
+- **CLI-FIX — Help Flag Consistency (`cmd/cli.go`):** Added `history` scanner to `--help` under `Available modules:` and fixed `sudokens` typo to `sudotokens`.
+
+**Files changed:** `core/reporting.go`, `cmd/report.go`, `core/graph.go`, `scanners/context.go`, `scanners/cronjobs.go`, `scanners/fileperms_exploit.go`, `scanners/groups.go`, `scanners/ssh_keys.go`, `scanners/writeable.go`, `scanners/processes.go`, `scanners/network.go`, `scanners/secrets.go`, `cmd/cli.go`, `CHANGELOG.md`
+
+---
+
 ### #73 — Lab Verification Suite & SubUID/Sysctl Chain Matching Hardening (`core/intelligence.go`)
 **Impact:** 🧪 End-to-end Docker testbed verification for all 5 new attack chains (100% pass rate) + 🔧 SubUID/SubGID allocation & dual sysctl source correlation
 
