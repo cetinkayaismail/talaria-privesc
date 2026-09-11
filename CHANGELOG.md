@@ -7,6 +7,20 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #75 — Multi-Agent Audit & Review Skills Suite (`.agents/skills/*`, `.agents/rules/audit-guard.md`)
+**Impact:** 🧠 Multi-agent governance system with context isolation + ⚡ Zero-token local telemetry scout saving ~60-75% tokens + 🛡️ Target read-only safety & dual-testing false-positive defense
+
+- **SKILL-01 — Master Multi-Agent Audit Orchestrator (`.agents/skills/audit-orchestrator/SKILL.md`):** Coordinates isolated subagent reviews using the zero-token local scout pattern. Automatically extracts AST facts, regex occurrences, and subprocess line numbers with zero LLM tokens, then dispatches 4 specialized subagents in parallel to generate a consolidated Executive Audit Matrix.
+- **SKILL-02 — Architecture & Boundary Enforcement (`.agents/skills/architecture-review/SKILL.md`):** Enforces unidirectional package hierarchy (`cmd` -> `scanners`/`core` -> `models`), zero third-party dependencies (pure Go stdlib), function length limits ($\le 80$ lines), standardized scanner signatures, and centralized `GetUserContext()` usage.
+- **SKILL-03 — Security & Operational Safety Enforcement (`.agents/skills/security-review/SKILL.md`):** Strictly enforces target machine zero-mutation invariants, allowlisted `exec.CommandContext` with hard timeouts, unprivileged execution safety, safe sensitive file auditing (shadow/history), restricted report permissions (`0600`), and terminal ANSI escape sequence sanitization (CWE-150).
+- **SKILL-04 — Performance & Resource Optimization (`.agents/skills/optimization-review/SKILL.md`):** Enforces pre-compiled package-level regex (banning runtime compiling in loops), fast-path substring pre-filtering, streaming `bufio.Scanner` (prohibiting `io.ReadAll` on unbounded files), and directory pruning via `ShouldIgnore()`.
+- **SKILL-05 — QA & Test Rigor Enforcement (`.agents/skills/qa-review/SKILL.md`):** Mandates dual-testing for all scanners (positive vuln trigger test + negative boundary test to eliminate false positives), attack chain integration testing in `core/intelligence_test.go`, race condition safety (`go test -race`), and developer host protection.
+- **RULE-01 — Context Isolation & Audit Guard Rule (`.agents/rules/audit-guard.md`):** Forbids monolithic sequential multi-file audits in the primary chat thread, strictly requiring parallel subagent delegation via `audit-orchestrator`.
+
+**Files changed:** `.agents/skills/audit-orchestrator/SKILL.md` *(new)*, `.agents/skills/architecture-review/SKILL.md` *(new)*, `.agents/skills/security-review/SKILL.md` *(new)*, `.agents/skills/optimization-review/SKILL.md` *(new)*, `.agents/skills/qa-review/SKILL.md` *(new)*, `.agents/rules/audit-guard.md` *(new)*, `CHANGELOG.md`
+
+---
+
 ### #74 — Bug Fixes, Dead Code Pruning, UserContext Hardening & Attack Graph Expansion (`core/*`, `scanners/*`, `cmd/*`)
 **Impact:** 🔧 Critical fix for live terminal summary undercounting across 25 scanner modules + 🛡️ nil pointer dereference panic hardening on minimal containers + ⚡ dead code pruning across 6 subsystems + 🎯 10 new attack vectors wired into the weighted directed attack graph
 
