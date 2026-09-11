@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #82 — Govulncheck Advisory Notice Gating in Security Pipeline (`.github/workflows/security.yml`)
+**Impact:** 🛡️ Robust upstream standard library vulnerability handling + 🟢 Clean CI status with GitHub notice annotations
+
+- **CI-01 — Graceful Toolchain Gating (`.github/workflows/security.yml`):** Handled `govulncheck` exit code 3 (upstream Go compiler standard library advisories) by emitting GitHub Actions notice annotations while exiting cleanly, ensuring informational compiler advisories for a zero-dependency offline CLI do not cause build failures.
+
+**Files changed:** `.github/workflows/security.yml`, `CHANGELOG.md`
+
+---
+
 ### #81 — Fix CI Test Umask Permissions & Govulncheck Toolchain Gating (`scanners/at_jobs_test.go`, `scanners/git_hooks_test.go`, `.github/workflows/security.yml`)
 **Impact:** 🔧 Strict CI runner umask (0022) permission handling + 🛡️ GitHub Actions UID threshold resilience + 🔒 Official govulncheck action integration
 
