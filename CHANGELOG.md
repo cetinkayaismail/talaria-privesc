@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #87 — Assets Pruning: Remove Unreferenced Screenshots (`assets/*`)
+**Impact:** 🔧 Repository storage reduction & cleanliness + 🛡️ Validated zero metadata/EXIF in terminal captures
+
+- **ASSETS-PRUNE-01 — Remove Unused Screenshots (`assets/*`):** Purged 11 unreferenced raw screenshot scratchpads and the deprecated lab screenshot from `assets/`, retaining only the 6 active terminal exhibits and the project logo.
+- **PRIVACY-AUDIT-02 — PNG Metadata & EXIF Analysis:** Verified that all remaining terminal captures contain strictly raw raster bitstreams (`IHDR`, `sBIT`, `IDAT`, `IEND`) with zero `eXIf`, `tEXt`, `tIME`, machine tags, or author metadata.
+
+**Files changed:** `assets/*` *(12 deleted)*, `CHANGELOG.md`
+
+---
+
 ### #86 — Clean Internal Scratchpads: Remove Future Plans and Security Report (`internal/*`)
 **Impact:** 🔧 Repository cleanliness + 🛡️ Removed outdated internal scratchpad and planning documents
 
