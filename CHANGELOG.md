@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #86 — Clean Internal Scratchpads: Remove Future Plans and Security Report (`internal/*`)
+**Impact:** 🔧 Repository cleanliness + 🛡️ Removed outdated internal scratchpad and planning documents
+
+- **CLEAN-01 — Remove Internal Scratchpads (`internal/FUTURE_PLANS.md`, `internal/SECURITY_REPORT.md`):** Purged obsolete internal planning notes and legacy security report from the `internal/` tree.
+
+**Files changed:** `internal/FUTURE_PLANS.md` *(deleted)*, `internal/SECURITY_REPORT.md` *(deleted)*, `CHANGELOG.md`
+
+---
+
 ### #85 — Repository Cleanup: Purge Lab Guide & Untrack Strategic Analysis (`docs/LAB_GUIDE.md`, `improvement_analysis.md`, `.gitignore`)
 **Impact:** 🔧 Purged obsolete lab documentation from disk + 🛡️ Untracked internal strategic planning analysis while preserving local file copy
 
