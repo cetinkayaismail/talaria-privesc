@@ -33,6 +33,20 @@ talaria --scan pam,capabilities,systemdoverrides,sysctl
 talaria --professional
 ```
 
+### Visual Verification in the Docker Testing Lab
+
+When executing a full audit inside the container, Talaria correlates all injected vulnerabilities, calculates the optimal escalation graph, and completes the scan in sub-second time (<250ms):
+
+<p align="center">
+  <img src="../assets/scan_summary_best_path.png" alt="Docker Lab Scan Execution and Best Attack Graph" width="850">
+</p>
+
+Individual modules actively identify injected misconfigurations (such as dangerous Polkit rules, writable package manager hooks, credentials in home directories, and cron job script targets):
+
+<p align="center">
+  <img src="../assets/lab_polkit_secrets_cron.png" alt="Injected Misconfiguration Findings in Lab" width="850">
+</p>
+
 ---
 
 ## 🔍 How to Verify Misconfigurations & Test Hardening

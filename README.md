@@ -73,34 +73,38 @@ make build-static
 
 ## 🖥️ Terminal Dashboard Demonstration
 
-Talaria features a clean, high-visibility terminal dashboard that highlights actionable attack chains:
-
-```
-┌──────────────────────────────────────────────────────────────────────────────────┐
-│  TALARIA v2.0 // ENTERPRISE AUDIT ENGINE                                         │
-│  Target: prod-core-banking-node-04.internal // User: appuser (UID: 1001)         │
-│  Policy: PCI-DSS v4.0 / CIS Linux v2.0.0 // Mode: Institutional Audit (-p)       │
-├──────────────────────────────────────────────────────────────────────────────────┤
-│  [+] SUID BINARIES ................. [OK] 24 audited, 1 CRITICAL                 │
-│      └─► /usr/local/bin/backup_exec (GTFOBins Shell Escape) [CIS-6.1.13]         │
-│  [+] CAPABILITIES .................. [OK] 12 audited, 0 findings                 │
-│  [+] SUDOERS CONFIGURATION ......... [OK] NOPASSWD /usr/bin/rsync [CIS-5.3.4]   │
-│  [+] SCHEDULED TASKS ............... [OK] 14 timers, 1 writable script          │
-│      └─► /opt/cron/db_backup.sh (Owner: appuser, Runner: root) [CIS-5.1.2]       │
-│  [+] PASSIVE SOCKET AUDIT .......... [OK] 8 listeners, 0 unauth exposed          │
-│  [+] INTELLIGENCE ENGINE ATTACK CHAIN DETECTED:                                  │
-│      ┌────────────────────────────────────────────────────────────────────────┐  │
-│      │ CHAIN: SUID Wrapper + Writable Subordinate Script -> ROOT PRIVILEGE    │  │
-│      │ Confidence: 100% CONFIRMED // Trajectory: appuser -> root (UID: 0)     │  │
-│      │ Vector: /usr/local/bin/backup_exec -> calls /opt/cron/db_backup.sh     │  │
-│      │ Authoritative Fix: chown root:root /opt/cron/db_backup.sh && chmod 700 │  │
-│      └────────────────────────────────────────────────────────────────────────┘  │
-│  [✓] Audit Completed in 14.8ms // Zero State Mutations // 0 Leaked Descriptors   │
-└──────────────────────────────────────────────────────────────────────────────────┘
-```
+Talaria delivers a high-contrast terminal interface engineered for immediate operational clarity:
 
 <p align="center">
-  <img src="assets/talaria_real_terminal.png" alt="Talaria Terminal Screenshot" width="750">
+  <img src="assets/talaria_terminal_banner.png" alt="Talaria Startup and Concurrency Throttling" width="850">
+</p>
+
+### Sub-Second Enterprise Audit & Automated Best Attack Path
+
+Talaria computes the most efficient, highest-probability escalation path to `root` using its embedded Dijkstra pathfinder, completing full system assessments in sub-second timeframes (<250ms):
+
+<p align="center">
+  <img src="assets/scan_summary_best_path.png" alt="Talaria Sub-Second Scan Summary and Best Attack Graph" width="850">
+</p>
+
+---
+
+## 🧠 Autonomous Attack Graph & Intelligence Engine
+
+Unlike traditional scanners that emit an unmanageable wall of text, Talaria links individual misconfigurations into **confirmed multi-stage attack chains** solving for root privilege (`goal:root`):
+
+### 1. Multi-Step Attack Graph Traversal (DAG Engine)
+Every edge in the Directed Acyclic Graph represents an exploit transition with confidence scoring and traversal weights:
+
+<p align="center">
+  <img src="assets/attack_graph_dag.png" alt="Directed Acyclic Graph Multi-Step Traversal to Root" width="850">
+</p>
+
+### 2. Cross-Reference Intelligence Synthesis
+Talaria automatically correlates independent primitives (e.g., cron jobs executing user-writable scripts, POSIX capabilities on interpreter binaries, dangerous Polkit JS rules, and systemd EnvironmentFile overrides):
+
+<p align="center">
+  <img src="assets/intelligence_engine_analysis.png" alt="Talaria Intelligence Engine Cross-Reference Analysis" width="850">
 </p>
 
 ---
@@ -119,6 +123,13 @@ Talaria continuously audits the target host across comprehensive privilege escal
 | **Kernel & Containers** | Kernel exploit matching (Dirty COW, Dirty Pipe, OverlayFS), Sysctl security parameters, Docker socket exposures, Kubernetes service tokens. |
 
 *See the full [Scanner Reference Guide](docs/SCANNERS.md) for detailed descriptions of all modules.*
+
+### High-Reliability Kernel LPE & Binary PATH Hijacking
+Talaria detects backport-aware 2026 Linux kernel vulnerabilities (Dirty Frag, Fragnesia, Copy Fail, DirtyClone, CIFSwitch, PinTheft, pedit COW) and flags relative binary execution in privileged binaries:
+
+<p align="center">
+  <img src="assets/kernel_cve_and_path_hijack.png" alt="High-Reliability Kernel CVE Matching and PATH Hijacking" width="850">
+</p>
 
 ---
 

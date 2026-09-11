@@ -50,6 +50,20 @@ graph TD
     ReportingPipeline --> EncryptedOutput["AES-256-GCM Cryptographic Archival<br/>(core/crypto.go)"]
 ```
 
+### 1.1 Multi-Stage Attack Graph & Autonomous DAG Resolution
+The Directed Acyclic Graph engine (`core/graph.go`) builds a directed network from the auditor's unprivileged user context (`user:<name>`) to elevated objectives (`goal:root`), resolving multi-stage pivot paths with edge-traversal weights:
+
+<p align="center">
+  <img src="../assets/attack_graph_dag.png" alt="Talaria Directed Acyclic Graph Attack Chain Resolution" width="850">
+</p>
+
+### 1.2 Cross-Reference Intelligence Engine
+The intelligence engine (`core/intelligence.go`) correlates isolated subsystem findings into actionable exploit chains before passing nodes to the attack graph:
+
+<p align="center">
+  <img src="../assets/intelligence_engine_analysis.png" alt="Intelligence Engine Multi-Finding Cross-Reference Analysis" width="850">
+</p>
+
 ---
 
 ## 2. Pipeline Execution Sequence

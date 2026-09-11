@@ -202,9 +202,17 @@ Talaria operates using a concurrent multi-module model. Core system checks are s
 * **Inspection Targets**: `uname -r`, `/etc/os-release`.
 * **Detection Logic**: Compares system kernel version against an integrated 2026 CVE database (DirtyFrag, Fragnesia, Copy Fail, AF_UNIX Diagnostic Race, Dirty Pipe, PwnKit). Uses distribution patch awareness to cross-reference backported security patches and eliminate false positives.
 
+<p align="center">
+  <img src="../assets/kernel_cve_and_path_hijack.png" alt="Kernel Vulnerability and Binary PATH Hijacking Output" width="850">
+</p>
+
 ### 27. Shell History & Token Extraction (`scanners/history.go`)
 * **Inspection Targets**: `~/.bash_history`, `~/.zsh_history`, `~/.sh_history`.
 * **Detection Logic**: Parses history files for exposed cleartext tokens, API keys, passwords passed in command lines (`mysql -p`, `curl -u`, `export AWS_SECRET_ACCESS_KEY`), and database credentials.
+
+<p align="center">
+  <img src="../assets/container_escape_secrets.png" alt="Container Escape and Shell History Secrets Output" width="850">
+</p>
 
 ### 28. PAM Configuration Auditor (`scanners/pam.go`)
 * **Inspection Targets**: `/etc/pam.d/*`.

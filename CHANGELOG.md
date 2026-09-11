@@ -7,6 +7,18 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #83 — Real Terminal Screenshot Visual Showcase Across Documentation (`README.md`, `docs/*`, `assets/*`)
+**Impact:** 🧠 Authentic terminal visual proof + 🎯 Live Attack Graph DAG and Intelligence Engine demonstration + ⚡ Verified sub-second (<250ms) execution highlights
+
+- **DOC-VISUAL-01 — Real Terminal Output Integration (`README.md`, `assets/*`):** Embedded authentic high-contrast terminal captures directly into `README.md` showcasing the startup banner, sub-second execution (<250ms) with best attack path synthesis, multi-step Directed Acyclic Graph (DAG) traversals to root (`goal:root`), cross-reference intelligence analysis, and 2026 kernel CVE matching.
+- **ARCH-VISUAL-02 — Attack Graph DAG & Cross-Reference Demonstration (`docs/ARCHITECTURE.md`):** Added visual captures to the Architecture Specification validating the real-world operational execution of the Directed Acyclic Graph engine (`core/graph.go`) and multi-vector intelligence correlation engine (`core/intelligence.go`).
+- **LAB-VISUAL-03 — Docker Testing Lab Verification (`docs/LAB_GUIDE.md`):** Embedded live execution screenshots from the multi-vector Docker testing lab displaying real-time detection and pathfinding across injected PAM, CronJob, Polkit, and credential misconfigurations.
+- **SCAN-VISUAL-04 — Kernel CVE Engine & Secrets Harvesting Highlights (`docs/SCANNERS.md`):** Added visual verification captures under Section 26 (Kernel CVE Engine with backport-aware 2026 CVE matching) and Section 27 (Shell history token extraction and container escape detection).
+
+**Files changed:** `README.md`, `docs/ARCHITECTURE.md`, `docs/LAB_GUIDE.md`, `docs/SCANNERS.md`, `assets/*`, `CHANGELOG.md`
+
+---
+
 ### #82 — Govulncheck Advisory Notice Gating in Security Pipeline (`.github/workflows/security.yml`)
 **Impact:** 🛡️ Robust upstream standard library vulnerability handling + 🟢 Clean CI status with GitHub notice annotations
 
