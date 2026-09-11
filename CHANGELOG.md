@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #76 — Go Bugfix & Code Hygiene Specialist Skill (`.agents/skills/code-hygiene/SKILL.md`)
+**Impact:** 🔧 Zero-token deterministic dead code detection via SSA call graph + 🛡️ Nil pointer, goroutine leak, and mutex copy prevention
+
+- **SKILL-06 — Go Bugfix & Code Hygiene Specialist (`.agents/skills/code-hygiene/SKILL.md`):** Combines Go's official `deadcode` tool (analyzing SSA call graphs with zero token cost) and `vet` with specialized audit heuristics for systems Go: nil pointer dereference prevention on minimal/scratch containers, goroutine/channel leak defense via `ctx.Done()`, mutex copying by value prevention, loop-deferred file descriptor accumulation, and variable shadowing.
+- **ORCH-02 — 5-Specialist Parallel Orchestration Integration (`.agents/skills/audit-orchestrator/SKILL.md`, `.agents/rules/audit-guard.md`):** Integrated the Bugfix & Hygiene specialist as the 5th subagent dispatched concurrently by `audit-orchestrator`, expanding the Executive Audit Matrix to automatically report dead code and Go runtime safety.
+
+**Files changed:** `.agents/skills/code-hygiene/SKILL.md` *(new)*, `.agents/skills/audit-orchestrator/SKILL.md`, `.agents/rules/audit-guard.md`, `CHANGELOG.md`
+
+---
+
 ### #75 — Multi-Agent Audit & Review Skills Suite (`.agents/skills/*`, `.agents/rules/audit-guard.md`)
 **Impact:** 🧠 Multi-agent governance system with context isolation + ⚡ Zero-token local telemetry scout saving ~60-75% tokens + 🛡️ Target read-only safety & dual-testing false-positive defense
 
