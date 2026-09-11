@@ -3,10 +3,12 @@ package scanners
 import (
 	"bufio"
 	"compress/gzip"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // KernelConfigResult represents a dangerous kernel configuration finding
@@ -118,7 +120,9 @@ func readKernelConfig() (string, error) {
 	}
 
 	// Fallback: /boot/config-$(uname -r)
-	uname, err := exec.Command("uname", "-r").Output()
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	uname, err := exec.CommandContext(ctx, "uname", "-r").Output()
 	if err == nil {
 		kernelVer := strings.TrimSpace(string(uname))
 		bootConfig := fmt.Sprintf("/boot/config-%s", kernelVer)

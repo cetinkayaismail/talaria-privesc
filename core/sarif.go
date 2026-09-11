@@ -42,7 +42,7 @@ type SARIFDriver struct {
 type SARIFRule struct {
 	ID                   string                         `json:"id"`
 	Name                 string                         `json:"name"`
-	ShortDescription     SARIFMultiformatMessageString `json:"shortDescription"`
+	ShortDescription     SARIFMultiformatMessageString  `json:"shortDescription"`
 	FullDescription      *SARIFMultiformatMessageString `json:"fullDescription,omitempty"`
 	DefaultConfiguration SARIFConfiguration             `json:"defaultConfiguration"`
 	HelpURI              string                         `json:"helpUri,omitempty"`

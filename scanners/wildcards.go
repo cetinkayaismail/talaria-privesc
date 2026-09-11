@@ -16,7 +16,7 @@ type WildcardResult struct {
 	SourceFile    string `json:"source_file"`           // Cron file, systemd service, or script path
 	ScriptPath    string `json:"script_path,omitempty"` // Target script being executed
 	Command       string `json:"command"`               // Exact command line with wildcard
-	VulnerableCmd string `json:"vulnerable_cmd"`       // tar, rsync, chown, chmod, 7z, zip
+	VulnerableCmd string `json:"vulnerable_cmd"`        // tar, rsync, chown, chmod, 7z, zip
 	WorkingDir    string `json:"working_dir"`           // Working directory of command / script
 	RiskLevel     string `json:"risk_level"`            // CRITICAL, HIGH, MEDIUM
 	IsWritableDir bool   `json:"is_writable_dir"`       // Whether current user can plant files in working dir

@@ -2093,4 +2093,3 @@ func (c *ShmSuidDeliveryChain) Evaluate(report *models.ScanReport) []ChainResult
 	}
 	return results
 }
-

@@ -63,8 +63,8 @@ func scanShellRCInternal(passwdPath string, customRootHome string) ([]ShellRCRes
 	}
 
 	type targetSpec struct {
-		path      string
-		isRoot    bool
+		path             string
+		isRoot           bool
 		isCreatableCheck bool
 	}
 

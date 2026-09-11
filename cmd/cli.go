@@ -8,20 +8,20 @@ import (
 
 // Config encapsulates all parsed command-line flags and runtime settings.
 type Config struct {
-	ScanModules     string
-	ExcludeModules  string
-	RootPath        string
-	OutputFile      string
-	OutputFormat    string
-	SudoPassword    string
-	IOLimit         int
-	EncryptKey      string
-	CTFMode         bool
-	AuditMode       bool
-	ShowUI          bool
-	NoColor         bool
-	QuietMode       bool   // Phase 4: Suppress interactive banners for CI/CD pipelines
-	FailOn          string // Phase 4: CI/CD policy threshold: CRITICAL, HIGH, MEDIUM
+	ScanModules    string
+	ExcludeModules string
+	RootPath       string
+	OutputFile     string
+	OutputFormat   string
+	SudoPassword   string
+	IOLimit        int
+	EncryptKey     string
+	CTFMode        bool
+	AuditMode      bool
+	ShowUI         bool
+	NoColor        bool
+	QuietMode      bool   // Phase 4: Suppress interactive banners for CI/CD pipelines
+	FailOn         string // Phase 4: CI/CD policy threshold: CRITICAL, HIGH, MEDIUM
 }
 
 // ParseFlags registers and parses all command-line arguments.

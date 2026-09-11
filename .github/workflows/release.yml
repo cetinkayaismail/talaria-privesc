@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    name: Build & Release Artifacts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Build Multi-Architecture Static Binaries
+        run: |
+          mkdir -p dist
+          VERSION=${GITHUB_REF#refs/tags/}
+          LDFLAGS="-s -w -buildid= -X main.Version=${VERSION} -extldflags '-static'"
+          
+          for arch in amd64 arm64 386; do
+            echo "Building static release for linux/${arch}..."
+            CGO_ENABLED=0 GOOS=linux GOARCH=${arch} go build -trimpath -ldflags="${LDFLAGS}" -o dist/talaria_linux_${arch} main.go
+          done
+          
+          cd dist
+          sha256sum talaria_linux_* > checksums.sha256
+          cd ..
+          ls -la dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/talaria_linux_amd64
+            dist/talaria_linux_arm64
+            dist/talaria_linux_386
+            dist/checksums.sha256
+          generate_release_notes: true

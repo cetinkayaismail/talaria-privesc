@@ -12,10 +12,10 @@ import (
 
 // PythonHijackResult represents a detected Python library or path hijacking vulnerability.
 type PythonHijackResult struct {
-	Type          string `json:"type"`                     // "Writable Search Path", "Writable Script Directory", "Shadowable Standard Library"
-	Path          string `json:"path"`                     // Directory or file path that is writable
-	ScriptName    string `json:"script_name,omitempty"`    // Root script affected (if applicable)
-	RiskLevel     string `json:"risk_level"`               // CRITICAL, HIGH, MEDIUM
+	Type          string `json:"type"`                  // "Writable Search Path", "Writable Script Directory", "Shadowable Standard Library"
+	Path          string `json:"path"`                  // Directory or file path that is writable
+	ScriptName    string `json:"script_name,omitempty"` // Root script affected (if applicable)
+	RiskLevel     string `json:"risk_level"`            // CRITICAL, HIGH, MEDIUM
 	Reason        string `json:"reason"`
 	ExploitHint   string `json:"exploit_hint"`
 	Remediation   string `json:"remediation,omitempty"`

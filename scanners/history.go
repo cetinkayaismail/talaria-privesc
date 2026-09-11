@@ -79,8 +79,6 @@ func ScanHistoryFiles() ([]HistorySecretResult, error) {
 	return results, nil
 }
 
-
-
 // auditHistoryLine checks a single history line for hardcoded credentials and masks them
 func auditHistoryLine(line string, username string, path string, lineNum int) *HistorySecretResult {
 	trimmed := strings.TrimSpace(line)

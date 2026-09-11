@@ -1,6 +1,6 @@
 # ==============================================================================
-# Talaria Enterprise Zero-Leakage .gitignore
-# Compliance Baseline: SOC 2 Type II, PCI-DSS v4.0, CIS Benchmarks
+# Talaria Open-Source Zero-Noise .gitignore
+# Compliance Baseline: SOC 2 Type II, CIS Benchmarks, Standard Go Toolchain
 # ==============================================================================
 
 # ------------------------------------------------------------------------------
@@ -11,8 +11,7 @@ dist/
 build/
 talaria
 Talaria
-talaria-static
-talaria.sh
+talaria-*
 *.exe
 *.exe~
 *.dll
@@ -24,7 +23,8 @@ talaria.sh
 *.zip
 
 # ------------------------------------------------------------------------------
-# 2. Test Outputs, Coverage Profiles & Execution Traces
+# 2. Test Execution Artifacts, Coverage Profiles & Traces
+# (Note: Unit tests *_test.go are tracked in source control)
 # ------------------------------------------------------------------------------
 *.test
 *.out
@@ -32,7 +32,6 @@ talaria.sh
 *.coverprofile
 coverage.*
 profile.cov
-*_test.go
 
 # ------------------------------------------------------------------------------
 # 3. Core Dumps, Logs & Crash Stack Traces
@@ -43,7 +42,7 @@ core.[0-9]*
 *.stackdump
 
 # ------------------------------------------------------------------------------
-# 4. Language & Environment Caches (Python, Node, Go)
+# 4. Language & Environment Caches
 # ------------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
@@ -70,31 +69,17 @@ Thumbs.db
 .env.*
 
 # ------------------------------------------------------------------------------
-# 6. Local Scratchpads, Staging Artifacts & Lab Suites
+# 6. Local Scratchpads, Staging Artifacts & Lab Execution Reports
 # ------------------------------------------------------------------------------
 test_report.txt
 scan_results
 *.tmp
-lab/
 lab_reports/
-Dockerfile.lab
-docker-compose.lab.yml
-LAB_GUIDE.md
-SCANNERS_DETAILED_GUIDE.md
-improvement_analysis.md
-PROPOSED_SCANNERS_AND_IMPROVEMENTS.md
-FUTURE_PLANS.md
-STANDARDS_AND_REMEDIATION_MATRIX.md
-internal/*.md
 codebase_analysis.md
-/ARCHITECTURE.md
+docs/research/
 
-# Local agent workspace directory and GitHub configuration
+# ------------------------------------------------------------------------------
+# 7. Local Agent & Knowledge Graph State
+# ------------------------------------------------------------------------------
 .agents/
-.github/
-
-# ------------------------------------------------------------------------------
-# 7. Explicit Inclusion Whitelist for Enterprise Documentation
-# ------------------------------------------------------------------------------
-!docs/
-!docs/**
+graphify-out/

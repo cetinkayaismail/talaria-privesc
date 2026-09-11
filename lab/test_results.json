@@ -1,0 +1,282 @@
+[
+  {
+    "id": "VEC-01",
+    "name": "SUID Binary Exploitation (GTFOBins)",
+    "module": "suid",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 772
+  },
+  {
+    "id": "VEC-02",
+    "name": "SGID Binary Exploitation (Group Escalation)",
+    "module": "sgid",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 850
+  },
+  {
+    "id": "VEC-03",
+    "name": "Linux Capabilities (cap_setuid+ep)",
+    "module": "capabilities",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 836
+  },
+  {
+    "id": "VEC-04",
+    "name": "Sudo NOPASSWD Rule",
+    "module": "sudo",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 748
+  },
+  {
+    "id": "VEC-05",
+    "name": "Sudo LD_PRELOAD env_keep Injection",
+    "module": "sudo",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 742
+  },
+  {
+    "id": "VEC-06",
+    "name": "Active Sudo Timestamp Token Reuse",
+    "module": "sudo",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 682
+  },
+  {
+    "id": "VEC-07",
+    "name": "Writable Sudo Timestamp Directory (/var/run/sudo/ts)",
+    "module": "sudo",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 717
+  },
+  {
+    "id": "VEC-08",
+    "name": "Writable /etc/sudoers.d/ Directory",
+    "module": "sudo",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 697
+  },
+  {
+    "id": "VEC-09",
+    "name": "TIOCSTI Terminal Command Injection (/dev/pts)",
+    "module": "sudo",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 696
+  },
+  {
+    "id": "VEC-10",
+    "name": "Cronjob Executing Writable Script",
+    "module": "cronjobs",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 710
+  },
+  {
+    "id": "VEC-11",
+    "name": "Cron Drop-in Directory Permission Drift (/etc/cron.d)",
+    "module": "crondirs",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 811
+  },
+  {
+    "id": "VEC-12",
+    "name": "Systemd Timer Executing Writable Script",
+    "module": "cronjobs",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 723
+  },
+  {
+    "id": "VEC-13",
+    "name": "Systemd Unit Drop-in Override Writable",
+    "module": "systemdoverrides",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 701
+  },
+  {
+    "id": "VEC-14",
+    "name": "Systemd Service EnvironmentFile Writable",
+    "module": "environmentfile",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 788
+  },
+  {
+    "id": "VEC-15",
+    "name": "PATH Hijacking (Writable Directory in PATH)",
+    "module": "pathhijack",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 780
+  },
+  {
+    "id": "VEC-16",
+    "name": "Sensitive File Exposure: OpenSSH Private Key",
+    "module": "secrets",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 702
+  },
+  {
+    "id": "VEC-17",
+    "name": "Sensitive File Exposure: AWS Credentials",
+    "module": "secrets",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 769
+  },
+  {
+    "id": "VEC-18",
+    "name": "Sensitive File Exposure: Plaintext Password in Config",
+    "module": "secrets",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 711
+  },
+  {
+    "id": "VEC-19",
+    "name": "Shell History Secrets Scraping",
+    "module": "history_secrets",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 753
+  },
+  {
+    "id": "VEC-20",
+    "name": "Dynamic Linker Writable Search Path (/etc/ld.so.conf.d)",
+    "module": "ldnss",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 819
+  },
+  {
+    "id": "VEC-21",
+    "name": "Logrotate Writable Configuration File",
+    "module": "logrotate",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 685
+  },
+  {
+    "id": "VEC-22",
+    "name": "Logrotate Writable Postrotate Script",
+    "module": "logrotate",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 742
+  },
+  {
+    "id": "VEC-23",
+    "name": "PAM Policy Writable Configuration",
+    "module": "pam",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 807
+  },
+  {
+    "id": "VEC-24",
+    "name": "PAM Exec Module Writable Script",
+    "module": "pam",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 741
+  },
+  {
+    "id": "VEC-25",
+    "name": "Polkit Permissive Custom JavaScript Rule",
+    "module": "polkit",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 716
+  },
+  {
+    "id": "VEC-26",
+    "name": "Exposed Writable Docker Daemon Socket",
+    "module": "sockets",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 750
+  },
+  {
+    "id": "VEC-27",
+    "name": "Exposed Writable Podman Daemon Socket",
+    "module": "sockets",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 847
+  },
+  {
+    "id": "VEC-28",
+    "name": "Modprobe Writable Install Hook Target",
+    "module": "modprobe",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 771
+  },
+  {
+    "id": "VEC-29",
+    "name": "Kubernetes ServiceAccount Token Leak",
+    "module": "cloudmeta",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 714
+  },
+  {
+    "id": "VEC-30",
+    "name": "Python VirtualEnv Writable Activate Script",
+    "module": "venvwrap",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 763
+  },
+  {
+    "id": "VEC-31",
+    "name": "Tmux / Screen Session Hijacking Socket",
+    "module": "sessions",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 725
+  },
+  {
+    "id": "VEC-32",
+    "name": "X11 Authority Cookie Hijack (.Xauthority)",
+    "module": "xauthority",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 730
+  },
+  {
+    "id": "VEC-33",
+    "name": "Critical System File Permissions (/etc/passwd Writable)",
+    "module": "filepermissions",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 724
+  },
+  {
+    "id": "VEC-34",
+    "name": "Cron Line Interpreter Argument Analysis (python3 script.py)",
+    "module": "cronjobs",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 712
+  },
+  {
+    "id": "VEC-35",
+    "name": "Process Environment Secret Token Harvesting",
+    "module": "procenv",
+    "status": "CAUGHT",
+    "reason": "Successfully detected",
+    "duration_ms": 920
+  }
+]

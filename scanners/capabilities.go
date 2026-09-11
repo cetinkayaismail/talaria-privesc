@@ -1,8 +1,10 @@
 package scanners
 
 import (
+	"context"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // CapabilityResult is exported for main.go reporting
@@ -27,8 +29,11 @@ var DangerousCapabilities = []string{
 func ScanCapabilities(root string) ([]CapabilityResult, error) {
 	var results []CapabilityResult
 
-	// Run getcap recursively.
-	cmd := exec.Command("getcap", "-r", root)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// Run getcap recursively with timeout boundary.
+	cmd := exec.CommandContext(ctx, "getcap", "-r", root)
 	output, _ := cmd.Output()
 
 	lines := strings.Split(string(output), "\n")

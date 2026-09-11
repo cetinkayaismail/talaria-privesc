@@ -7,7 +7,7 @@ Talaria is a modular, zero-dependency, zero-mutation Linux Privilege Escalation 
 ## 1. Core Invocation Patterns
 
 ### Comprehensive Full-System Audit
-Execute all 40 audit modules across the root filesystem:
+Execute all 51 audit modules across the root filesystem:
 ```bash
 ./talaria --scan all
 ```

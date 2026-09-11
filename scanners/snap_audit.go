@@ -2,11 +2,13 @@ package scanners
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // SnapAuditResult represents an audit finding for a vulnerable or misconfigured snapd/flatpak component.
@@ -35,8 +37,10 @@ func readSnapdVersion() string {
 		if err != nil {
 			continue
 		}
-		cmd := exec.Command(path, "--version")
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		cmd := exec.CommandContext(ctx, path, "--version")
 		out, err := cmd.Output()
+		cancel()
 		if err != nil {
 			continue
 		}
@@ -57,7 +61,9 @@ func readFlatpakVersion() string {
 	if err != nil {
 		return ""
 	}
-	cmd := exec.Command(path, "--version")
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, path, "--version")
 	out, err := cmd.Output()
 	if err != nil {
 		return ""

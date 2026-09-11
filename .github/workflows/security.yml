@@ -1,0 +1,165 @@
+name: Security & Standards Enforcement
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ----------------------------------------------------------------------------
+  # 1. Architectural Invariants & Zero-Dependency Enforcement
+  # ----------------------------------------------------------------------------
+  standards-gatekeeper:
+    name: Architectural Invariants Gatekeeper
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: false
+
+      - name: Enforce Architectural Invariants (AST Analysis)
+        run: |
+          go run scripts/enforce_standards.go
+
+      - name: Enforce Canonical Go Formatting
+        run: |
+          echo "=> Verifying zero formatting drift..."
+          UNFORMATTED=$(gofmt -l .)
+          if [ -n "$UNFORMATTED" ]; then
+            echo "❌ Unformatted Go files detected:"
+            echo "$UNFORMATTED"
+            exit 1
+          fi
+          echo "✅ Formatting verified: 100% compliant with gofmt"
+
+      - name: Enforce go.mod Immutability (Zero Dependencies)
+        run: |
+          git diff --exit-code go.mod
+          if grep -q "require" go.mod; then
+            echo "❌ External dependencies detected in go.mod! Third-party libraries are strictly banned."
+            exit 1
+          fi
+          echo "✅ Supply chain verified: 0 external dependencies"
+
+  # ----------------------------------------------------------------------------
+  # 2. Zero-Mutation & Process Isolation Audit
+  # ----------------------------------------------------------------------------
+  zero-mutation-and-isolation:
+    name: Zero-Mutation & Subprocess Isolation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Audit Filesystem Read-Only Invariant in Scanners
+        run: |
+          echo "=> Checking for forbidden filesystem mutating calls in scanners/ and core/..."
+          MUTATION_CALLS=$(grep -rnE 'os\.(Create|CreateTemp|WriteFile|Mkdir|MkdirAll|Remove|RemoveAll|Chmod|Chown|Truncate)' scanners/ core/ | grep -v '_test\.go' || true)
+          if [ -n "$MUTATION_CALLS" ]; then
+            echo "❌ Forbidden filesystem mutating calls detected in security audit modules:"
+            echo "$MUTATION_CALLS"
+            echo "Talaria operates under a strict read-only guarantee. Audits must never mutate target state."
+            exit 1
+          fi
+          echo "✅ Zero-Mutation verified: 0 write operations in scanners/ and core/"
+
+      - name: Verify Strict CGO Ban
+        run: |
+          echo "=> Auditing for CGO pragmas or imports..."
+          CGO_IMPORTS=$(grep -rnE 'import "C"' cmd/ core/ models/ scanners/ internal/ || true)
+          if [ -n "$CGO_IMPORTS" ]; then
+            echo "❌ CGO import detected! CGO is strictly banned for portability and safety:"
+            echo "$CGO_IMPORTS"
+            exit 1
+          fi
+          echo "✅ CGO ban verified: 100% pure Go standard library"
+
+  # ----------------------------------------------------------------------------
+  # 3. Race Condition & Concurrency Hardening
+  # ----------------------------------------------------------------------------
+  race-and-concurrency:
+    name: Race Detection & Compiler Vet
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+          cache: true
+
+      - name: Compiler Static Analysis (go vet)
+        run: |
+          go vet ./...
+
+      - name: Run Test Suite with Go Race Detector
+        run: |
+          go test -v -count=1 -race ./...
+
+  # ----------------------------------------------------------------------------
+  # 4. Supply Chain & Vulnerability Scanning (govulncheck)
+  # ----------------------------------------------------------------------------
+  vulnerability-scan:
+    name: Go Official Vulnerability Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Install and Run govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+
+  # ----------------------------------------------------------------------------
+  # 5. Deterministic Static Binary Anti-Tamper Verification
+  # ----------------------------------------------------------------------------
+  static-binary-audit:
+    name: Deterministic Static Binary Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Compile Hermetic Static Binary
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -buildid= -extldflags '-static'" -o talaria main.go
+          ls -la talaria
+
+      - name: Verify ELF Static Linkage (No Dynamic Interpreter)
+        run: |
+          file talaria | grep -E 'statically linked|static-pie'
+          if ldd talaria 2>&1 | grep -q "not a dynamic executable"; then
+            echo "✅ Verified: talaria is a 100% standalone static executable"
+          else
+            echo "✅ Verified via file command: statically linked"
+          fi
+
+      - name: Smoke Test Execution
+        run: |
+          ./talaria --help
