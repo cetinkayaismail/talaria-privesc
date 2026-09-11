@@ -7,6 +7,19 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #78 — Scanner Architecture Modularization, Loop Defer Fix & Test Boundary Hardening (`scanners/*`, `core/*`)
+**Impact:** 🔧 Loop-deferred file descriptor leak resolved in `services.go` + 🏗️ Monolithic 143-line `sudo_token.go` scanner decomposed into modular helpers + 🧪 Comprehensive dual-testing & Chain #22 integration verification
+
+- **BUG-FIX-01 — Loop Defer File Descriptor Accumulation (`scanners/services.go`):** Extracted `parseProcNetPorts(path, ports)` helper to guarantee immediate file closure via function return scoping instead of accumulating unclosed descriptors inside the `/proc/net/tcp` iteration loop.
+- **ARCH-02 — Monolithic Function Decomposition (`scanners/sudo_token.go`):** Refactored 143-line monolithic `ScanSudoTokensAndTTY()` into 4 focused private sub-auditors (`checkActiveSudoSession`, `auditSudoTimestampDirs`, `checkWritableSudoersD`, and `auditTIOCSTIPts`), all strictly adhering to the <=80 lines architecture rule.
+- **TEST-03 — Deterministic Service Mocking & Negative Boundaries (`scanners/services.go`, `scanners/services_test.go`):** Extracted `auditServicesWithPorts` to decouple port evaluation from procfs I/O. Added positive trigger tests for unauthenticated Memcached (port 11211) and negative boundary tests for non-target ports (8080) and established connections.
+- **TEST-04 — Peer Ticket Permission & Ownership Boundary Tests (`scanners/sudo_token_test.go`):** Implemented isolated positive test fixtures verifying dangerous writable peer ticket flagging (`0666` with peer UID) and negative boundary tests validating secure permission gating (`0600`), self-owned ticket exclusion, and non-existent path resilience.
+- **INTEL-05 — Attack Chain 22 Integration Coverage (`core/intelligence_test.go`):** Added unit test coverage for `ServiceBlankAuthChain` (Chain #22) ensuring exposed unauthenticated local services produce `100% CONFIRMED` attack chain paths.
+
+**Files changed:** `scanners/services.go`, `scanners/sudo_token.go`, `scanners/services_test.go`, `scanners/sudo_token_test.go`, `core/intelligence_test.go`, `CHANGELOG.md`
+
+---
+
 ### #77 — Go Language Safety, Concurrency & Performance Hardening (`.agents/skills/*`)
 **Impact:** 🛡️ Typed nil interface trap defense & slice aliasing protection + ⚡ Loop timer leak prevention & zero-allocation slice patterns + 🔍 Runtime diagnostic recipes
 

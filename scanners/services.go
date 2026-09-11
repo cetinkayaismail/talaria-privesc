@@ -23,9 +23,12 @@ type ServiceAuditResult struct {
 
 // ScanLocalServices checks for locally running services with weak/no authentication
 func ScanLocalServices() ([]ServiceAuditResult, error) {
-	var results []ServiceAuditResult
-
 	listeningPorts := getPassiveListeningPorts()
+	return auditServicesWithPorts(listeningPorts), nil
+}
+
+func auditServicesWithPorts(listeningPorts map[int]bool) []ServiceAuditResult {
+	var results []ServiceAuditResult
 
 	// 1. MySQL Blank Password Check (only if port 3306 is listening)
 	if listeningPorts[3306] {
@@ -54,40 +57,44 @@ func ScanLocalServices() ([]ServiceAuditResult, error) {
 		})
 	}
 
-	return results, nil
+	return results
 }
 
 func getPassiveListeningPorts() map[int]bool {
 	ports := make(map[int]bool)
 	for _, procNet := range []string{"/proc/net/tcp", "/proc/net/tcp6"} {
-		file, err := os.Open(procNet)
-		if err != nil {
-			continue
-		}
-		defer file.Close()
+		parseProcNetPorts(procNet, ports)
+	}
+	return ports
+}
 
-		scanner := bufio.NewScanner(file)
-		// Skip header
-		if scanner.Scan() {
-			for scanner.Scan() {
-				fields := strings.Fields(scanner.Text())
-				if len(fields) >= 4 {
-					state := fields[3]
-					// 0A is TCP_LISTEN in procfs
-					if state == "0A" {
-						addrParts := strings.Split(fields[1], ":")
-						if len(addrParts) == 2 {
-							portHex := addrParts[1]
-							if port, err := strconv.ParseInt(portHex, 16, 64); err == nil {
-								ports[int(port)] = true
-							}
+func parseProcNetPorts(path string, ports map[int]bool) {
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	// Skip header
+	if scanner.Scan() {
+		for scanner.Scan() {
+			fields := strings.Fields(scanner.Text())
+			if len(fields) >= 4 {
+				state := fields[3]
+				// 0A is TCP_LISTEN in procfs
+				if state == "0A" {
+					addrParts := strings.Split(fields[1], ":")
+					if len(addrParts) == 2 {
+						portHex := addrParts[1]
+						if port, err := strconv.ParseInt(portHex, 16, 64); err == nil {
+							ports[int(port)] = true
 						}
 					}
 				}
 			}
 		}
 	}
-	return ports
 }
 
 func checkMySQLBlankPassword() *ServiceAuditResult {
