@@ -7,6 +7,18 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #77 — Go Language Safety, Concurrency & Performance Hardening (`.agents/skills/*`)
+**Impact:** 🛡️ Typed nil interface trap defense & slice aliasing protection + ⚡ Loop timer leak prevention & zero-allocation slice patterns + 🔍 Runtime diagnostic recipes
+
+- **HARDFIX-01 — Typed Nil Interface & Slice Aliasing Defenses (`.agents/skills/code-hygiene/SKILL.md`):** Enriched code hygiene heuristics with the typed nil interface trap (preventing non-nil `error` interfaces wrapping nil concrete pointers), slice backing array aliasing defense via full slice expressions (`a[:len(a):len(a)]`), integer truncation bounds checking, and the single error handling rule (errors logged OR returned, never both).
+- **PERF-02 — Timer Leak & Zero-Allocation Patterns (`.agents/skills/optimization-review/SKILL.md`):** Added `time.After` timer leak prevention in persistent select loops (mandating reusable `time.NewTimer` + `Reset()`), zero-allocation slice reset pattern (`slice = slice[:0]`), and modern standard library primitives (`slices.Contains`, `slices.Equal`, `bytes.Equal`) over slow reflection.
+- **ARCH-03 — Defensive State Copying & Error Standards (`.agents/skills/architecture-review/SKILL.md`):** Added defensive copying rules for struct internals (`slices.Clone`), zero-value struct usability design, and `errors.Is`/`errors.As` standards over raw error string comparison.
+- **QA-04 — Runtime Diagnostics & Profiling Recipes (`.agents/skills/qa-review/SKILL.md`):** Added `GOTRACEBACK=all` and `GODEBUG=schedtrace=1000,gctrace=1` troubleshooting recipes for debugging flaky test hangs, race conditions, and CPU/memory profiling during performance tests.
+
+**Files changed:** `.agents/skills/code-hygiene/SKILL.md`, `.agents/skills/optimization-review/SKILL.md`, `.agents/skills/architecture-review/SKILL.md`, `.agents/skills/qa-review/SKILL.md`, `CHANGELOG.md`
+
+---
+
 ### #76 — Go Bugfix & Code Hygiene Specialist Skill (`.agents/skills/code-hygiene/SKILL.md`)
 **Impact:** 🔧 Zero-token deterministic dead code detection via SSA call graph + 🛡️ Nil pointer, goroutine leak, and mutex copy prevention
 
