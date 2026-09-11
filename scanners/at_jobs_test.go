@@ -47,11 +47,14 @@ func TestScanAtJobs(t *testing.T) {
 	if err := os.WriteFile(jobFile, []byte("#!/bin/sh\n"), 0666); err != nil {
 		t.Fatalf("failed to write job file: %v", err)
 	}
+	if err := os.Chmod(jobFile, 0666); err != nil {
+		t.Fatalf("failed to chmod job file: %v", err)
+	}
 
 	userCtx := GetUserContext()
 	origUID := userCtx.UID
 	origThresh := atJobPrivilegedThreshold
-	atJobPrivilegedThreshold = 1001
+	atJobPrivilegedThreshold = origUID + 1000
 	userCtx.UID = 9999
 	defer func() {
 		userCtx.UID = origUID

@@ -20,6 +20,7 @@ func TestScanGitHooks(t *testing.T) {
 	if err := os.MkdirAll(hooksDir, 0777); err != nil {
 		t.Fatalf("failed to mkdir: %v", err)
 	}
+	_ = os.Chmod(hooksDir, 0777)
 
 	// Put a sample file and a real hook
 	sampleHook := filepath.Join(hooksDir, "pre-commit.sample")
@@ -29,6 +30,9 @@ func TestScanGitHooks(t *testing.T) {
 	realHook := filepath.Join(hooksDir, "post-merge")
 	if err := os.WriteFile(realHook, []byte("#!/bin/sh\n"), 0777); err != nil {
 		t.Fatalf("failed to write hook: %v", err)
+	}
+	if err := os.Chmod(realHook, 0777); err != nil {
+		t.Fatalf("failed to chmod realHook: %v", err)
 	}
 
 	// FP: When userCtx.UID matches repo owner, scanner must SKIP (it's user's own repo!)
