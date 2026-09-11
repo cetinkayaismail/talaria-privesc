@@ -181,7 +181,6 @@ Explore our detailed specifications and guides:
 | **[SIEM & Telemetry Integration](docs/INTEGRATION_GUIDE.md)** | JSON Schema, Splunk blueprints, Elastic Logstash pipelines, Datadog, and SARIF export. |
 | **[Operations & SRE Runbook](docs/OPERATIONS_RUNBOOK.md)** | Deployment topologies (Kubernetes CronJobs, systemd timers, air-gapped workloads). |
 | **[Developer Guide](docs/DEVELOPMENT.md)** | Local environment setup, test harness, benchmarking, and cross-compilation. |
-| **[Docker Lab Guide](docs/LAB_GUIDE.md)** | Testing Talaria against simulated vulnerable environments in Docker. |
 | **[Command Line Flag Reference](USAGE.md)** | Complete CLI option index, scoping parameters, and advanced filtering. |
 
 ---

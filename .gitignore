@@ -75,6 +75,10 @@ test_report.txt
 scan_results
 *.tmp
 lab_reports/
+Dockerfile.lab
+docker-compose.lab.yml
+lab/
+docs/LAB_GUIDE.md
 codebase_analysis.md
 docs/research/
 

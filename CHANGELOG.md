@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #84 — Repository Cleanliness: Untrack Local Lab Sandboxes & Streamline Docs (`.gitignore`, `README.md`, `docs/*`)
+**Impact:** 🔧 Pristine repository structure + 🛡️ Removed auxiliary Python test scripts & sandbox files from Git + 💻 100% preserved locally on host disk
+
+- **REPO-HYGIENE-01 — Untrack Local Docker & Python Lab Files (`.gitignore`, `Dockerfile.lab`, `docker-compose.lab.yml`, `lab/*`):** Safely untracked auxiliary development lab sandboxes and JSON test run dumps (`git rm -r --cached`) from Git version control while keeping all files intact on the local workstation. Added entries to `.gitignore` to prevent re-tracking.
+- **DOCS-STREAMLINE-02 — Streamline Documentation Map (`README.md`, `docs/README.md`):** Removed obsolete lab guide references from the core documentation tables to maintain an institutional enterprise presentation focused purely on production deployments, architecture, and scanner catalogs.
+
+**Files changed:** `.gitignore`, `README.md`, `docs/README.md`, `CHANGELOG.md`
+
+---
+
 ### #83 — Real Terminal Screenshot Visual Showcase Across Documentation (`README.md`, `docs/*`, `assets/*`)
 **Impact:** 🧠 Authentic terminal visual proof + 🎯 Live Attack Graph DAG and Intelligence Engine demonstration + ⚡ Verified sub-second (<250ms) execution highlights
 

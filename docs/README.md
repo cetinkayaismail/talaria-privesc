@@ -15,7 +15,6 @@ docs/
 ├── INTEGRATION_GUIDE.md                # SIEM integration (Splunk, Elastic, Datadog), JSON Schema, SARIF
 ├── OPERATIONS_RUNBOOK.md               # SRE deployment guide (Kubernetes CronJobs, systemd, air-gap)
 ├── DEVELOPMENT.md                      # Developer environment, benchmarking, testing, and debugging
-├── LAB_GUIDE.md                        # Docker testing lab testbed setup and test execution
 └── STANDARDS_AND_REMEDIATION_MATRIX.md # In-depth remediation matrix and risk classifications
 ```
 
@@ -65,12 +64,6 @@ Everything needed to develop and extend Talaria:
 - Building standard and static binaries.
 - Running unit tests with race detection.
 - Profiling CPU and memory allocations with `pprof`.
-
-### 🧪 [Docker Lab Testbed Guide](LAB_GUIDE.md)
-Hands-on validation environment:
-- Launching the isolated Docker test container (`docker-compose.lab.yml`).
-- Generating mock privilege escalation misconfigurations.
-- Validating zero-mutation and detection accuracy.
 
 ---
 
