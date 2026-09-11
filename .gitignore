@@ -80,6 +80,7 @@ docker-compose.lab.yml
 lab/
 docs/LAB_GUIDE.md
 codebase_analysis.md
+improvement_analysis.md
 docs/research/
 
 # ------------------------------------------------------------------------------

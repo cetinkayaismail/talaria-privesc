@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #85 — Repository Cleanup: Purge Lab Guide & Untrack Strategic Analysis (`docs/LAB_GUIDE.md`, `improvement_analysis.md`, `.gitignore`)
+**Impact:** 🔧 Purged obsolete lab documentation from disk + 🛡️ Untracked internal strategic planning analysis while preserving local file copy
+
+- **FILE-PURGE-01 — Local & Remote Deletion of Lab Guide (`docs/LAB_GUIDE.md`):** Permanently deleted the obsolete Docker laboratory guide from both version control and local disk.
+- **REPO-HYGIENE-02 — Untrack Strategic Improvement Analysis (`improvement_analysis.md`, `.gitignore`):** Removed `improvement_analysis.md` from the Git repository index (`git rm --cached`) while keeping it fully intact on the local filesystem. Added `improvement_analysis.md` to `.gitignore` to prevent future tracking.
+
+**Files changed:** `docs/LAB_GUIDE.md` *(deleted)*, `improvement_analysis.md` *(untracked)*, `.gitignore`, `CHANGELOG.md`
+
+---
+
 ### #84 — Repository Cleanliness: Untrack Local Lab Sandboxes & Streamline Docs (`.gitignore`, `README.md`, `docs/*`)
 **Impact:** 🔧 Pristine repository structure + 🛡️ Removed auxiliary Python test scripts & sandbox files from Git + 💻 100% preserved locally on host disk
 
