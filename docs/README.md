@@ -15,7 +15,8 @@ docs/
 ├── INTEGRATION_GUIDE.md                # SIEM integration (Splunk, Elastic, Datadog), JSON Schema, SARIF
 ├── OPERATIONS_RUNBOOK.md               # SRE deployment guide (Kubernetes CronJobs, systemd, air-gap)
 ├── DEVELOPMENT.md                      # Developer environment, benchmarking, testing, and debugging
-└── STANDARDS_AND_REMEDIATION_MATRIX.md # In-depth remediation matrix and risk classifications
+├── STANDARDS_AND_REMEDIATION_MATRIX.md # In-depth remediation matrix and risk classifications
+└── FUTURE_PLANS.md                     # Strategic roadmap, evaluation matrix, and upcoming releases
 ```
 
 ---
@@ -64,6 +65,13 @@ Everything needed to develop and extend Talaria:
 - Building standard and static binaries.
 - Running unit tests with race detection.
 - Profiling CPU and memory allocations with `pprof`.
+
+### 🗺️ [Strategic Roadmap & Future Plans](FUTURE_PLANS.md)
+Master strategic direction and prioritized engineering roadmap:
+- Phased milestone deliverables (v2.3 to v3.0).
+- Deep inspection scanners (ELF analysis, D-Bus policies, Linux capabilities).
+- Container breakout engine and kernel backport resolution.
+- Multi-goal attack graph pathfinding and DevSecOps baseline diffing.
 
 ---
 

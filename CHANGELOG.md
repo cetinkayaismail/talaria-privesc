@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #88 — Strategic Roadmap & Future Plans Documentation (`docs/FUTURE_PLANS.md`, `FUTURE_PLANS.md`, `README.md`, `docs/README.md`)
+**Impact:** 🗺️ Official strategic engineering roadmap & upcoming release deliverables + 📊 Evaluated scorecard matrix
+
+- **DOC-ROADMAP-01 — Master Future Plans Specification (`docs/FUTURE_PLANS.md`):** Authored an official master strategic roadmap detailing upcoming phased releases (v2.3 through v3.0), including deep ELF disassembly analysis (`--deep-elf`), D-Bus system policy auditing, expanded Linux capability matrices, container breakout engines, distro kernel CVE backport tracking, and multi-goal attack graph pathfinding.
+- **DOC-DISCOVER-02 — Root Pointer & Documentation Index Integration (`FUTURE_PLANS.md`, `README.md`, `docs/README.md`):** Embedded discoverability pointers at repository root and integrated future plans into the official documentation directory map.
+
+**Files changed:** `docs/FUTURE_PLANS.md` *(new)*, `FUTURE_PLANS.md` *(new)*, `docs/README.md`, `README.md`, `CHANGELOG.md`
+
+---
+
 ### #87 — Assets Pruning: Remove Unreferenced Screenshots (`assets/*`)
 **Impact:** 🔧 Repository storage reduction & cleanliness + 🛡️ Validated zero metadata/EXIF in terminal captures
 

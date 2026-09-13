@@ -181,6 +181,7 @@ Explore our detailed specifications and guides:
 | **[SIEM & Telemetry Integration](docs/INTEGRATION_GUIDE.md)** | JSON Schema, Splunk blueprints, Elastic Logstash pipelines, Datadog, and SARIF export. |
 | **[Operations & SRE Runbook](docs/OPERATIONS_RUNBOOK.md)** | Deployment topologies (Kubernetes CronJobs, systemd timers, air-gapped workloads). |
 | **[Developer Guide](docs/DEVELOPMENT.md)** | Local environment setup, test harness, benchmarking, and cross-compilation. |
+| **[Strategic Roadmap & Future Plans](FUTURE_PLANS.md)** | Phased engineering milestones (v2.3–v3.0), scorecard evaluations, and upcoming capabilities. |
 | **[Command Line Flag Reference](USAGE.md)** | Complete CLI option index, scoping parameters, and advanced filtering. |
 
 ---
