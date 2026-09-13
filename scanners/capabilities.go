@@ -58,48 +58,55 @@ func ScanCapabilities(root string) ([]CapabilityResult, error) {
 
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
+		if res := parseCapabilityLine(line); res != nil {
+			results = append(results, *res)
 		}
-
-		parts := strings.SplitN(line, " ", 2)
-		if len(parts) < 2 {
-			continue
-		}
-
-		path := strings.TrimSpace(parts[0])
-		caps := strings.TrimSpace(parts[1])
-		caps = strings.TrimPrefix(caps, "=")
-		caps = strings.TrimSpace(caps)
-
-		isDangerous := false
-		capsLower := strings.ToLower(caps)
-		for _, dc := range DangerousCapabilities {
-			if strings.Contains(capsLower, dc) {
-				isDangerous = true
-				break
-			}
-		}
-
-		hint := ""
-		remediation := ""
-		complianceTag := ""
-		if isDangerous {
-			hint = GetExploitHint(path, "capability")
-			remediation = "setcap -r " + path
-			complianceTag = "CIS-Linux-6.1.15 / NIST-AC-6(1)"
-		}
-
-		results = append(results, CapabilityResult{
-			Path:          path,
-			Capabilities:  caps,
-			IsDangerous:   isDangerous,
-			ExploitHint:   hint,
-			Remediation:   remediation,
-			ComplianceTag: complianceTag,
-		})
 	}
 
 	return results, nil
+}
+
+// parseCapabilityLine parses a single line of getcap output and assesses its privilege escalation risk.
+func parseCapabilityLine(line string) *CapabilityResult {
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return nil
+	}
+
+	parts := strings.SplitN(line, " ", 2)
+	if len(parts) < 2 {
+		return nil
+	}
+
+	path := strings.TrimSpace(parts[0])
+	caps := strings.TrimSpace(parts[1])
+	caps = strings.TrimPrefix(caps, "=")
+	caps = strings.TrimSpace(caps)
+
+	isDangerous := false
+	capsLower := strings.ToLower(caps)
+	for _, dc := range DangerousCapabilities {
+		if strings.Contains(capsLower, dc) {
+			isDangerous = true
+			break
+		}
+	}
+
+	hint := ""
+	remediation := ""
+	complianceTag := ""
+	if isDangerous {
+		hint = GetExploitHint(path, "capability")
+		remediation = "setcap -r " + path
+		complianceTag = "CIS-Linux-6.1.15 / NIST-AC-6(1)"
+	}
+
+	return &CapabilityResult{
+		Path:          path,
+		Capabilities:  caps,
+		IsDangerous:   isDangerous,
+		ExploitHint:   hint,
+		Remediation:   remediation,
+		ComplianceTag: complianceTag,
+	}
 }

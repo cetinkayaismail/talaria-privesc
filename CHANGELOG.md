@@ -7,6 +7,17 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #94 — Comprehensive Test Suites & Parser Decoupling for Capabilities and SUID Scanners (`scanners/*`)
+**Impact:** 🛡️ 100% Quality Gate compliance + 📉 Comprehensive negative boundary test coverage
+
+- **TEST-CAP-01 — Capabilities Parser Decoupling & Unit Tests (`scanners/capabilities.go`, `scanners/capabilities_test.go`):** Extracted `parseCapabilityLine` into a decoupled pure function, adding positive trigger tests (`cap_setuid`, `cap_sys_admin`, `cap_dac_override`, `cap_sys_ptrace`, `cap_dac_read_search`) and negative boundary tests (benign caps `cap_net_raw`/`cap_audit_write`, malformed lines, clean directory).
+- **TEST-SUID-02 — SUID & SGID Unit Test Suite (`scanners/suid_test.go`):** Added comprehensive unit test coverage for `evaluateSUIDBinary`, testing GTFOBins exploitation triggers, system binary suppression (`passwd`, `sudo`, `mount`), Deep ELF CTF vs. Audit mode toggling, and clean directory handling.
+- **TEST-ELF-03 — Host Safety & Function Length Compliance (`scanners/elf_deep_test.go`):** Refactored tests to use `t.TempDir()` for strict test directory lifecycle isolation, and modularized compiler tests into functions under 80 lines.
+
+**Files changed:** `scanners/capabilities.go`, `scanners/capabilities_test.go` *(new)*, `scanners/suid_test.go` *(new)*, `scanners/elf_deep_test.go`, `CHANGELOG.md`
+
+---
+
 ### #93 — CLI Flag Validation Refactoring (`cmd/cli.go`)
 **Impact:** 🔧 Architecture standard compliance ($\le 80$ lines limit)
 

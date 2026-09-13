@@ -44,35 +44,24 @@ func TestExtractPrintableStrings(t *testing.T) {
 }
 
 func TestAnalyzeDeepELF_NonELF(t *testing.T) {
-	tmpFile, err := os.CreateTemp("", "talaria_non_elf_*")
-	if err != nil {
+	tmpFile := filepath.Join(t.TempDir(), "talaria_non_elf")
+	if err := os.WriteFile(tmpFile, []byte("this is not an ELF binary"), 0600); err != nil {
 		t.Fatalf("failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
 
-	tmpFile.WriteString("this is not an ELF binary")
-	tmpFile.Close()
-
-	match, err := AnalyzeDeepELF(tmpFile.Name())
+	match, err := AnalyzeDeepELF(tmpFile)
 	if err == nil && match != nil {
 		t.Errorf("expected error or nil match on non-ELF file, got match: %+v", match)
 	}
 }
 
-func TestAnalyzeDeepELF_WithCompiler(t *testing.T) {
-	// Verify if gcc is available for live binary testing
+func TestAnalyzeDeepELF_CompilerPositive(t *testing.T) {
 	gccPath, err := exec.LookPath("gcc")
 	if err != nil || gccPath == "" {
 		t.Skip("gcc not found in PATH, skipping live ELF compiler tests")
 	}
 
-	tempDir, err := os.MkdirTemp("", "talaria_elf_test_*")
-	if err != nil {
-		t.Fatalf("failed to create temp dir: %v", err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// 1. Positive test: imports system() and calls relative command "service"
+	tempDir := t.TempDir()
 	vulnSource := filepath.Join(tempDir, "vuln.c")
 	vulnBin := filepath.Join(tempDir, "vuln_bin")
 	err = os.WriteFile(vulnSource, []byte(`
@@ -101,8 +90,17 @@ int main() {
 	if match.Command != "service" {
 		t.Errorf("expected detected command 'service', got '%s'", match.Command)
 	}
+}
 
-	// 2. Negative test: imports system() but calls ABSOLUTE path "/usr/sbin/service"
+func TestAnalyzeDeepELF_CompilerNegative(t *testing.T) {
+	gccPath, err := exec.LookPath("gcc")
+	if err != nil || gccPath == "" {
+		t.Skip("gcc not found in PATH, skipping live ELF compiler tests")
+	}
+
+	tempDir := t.TempDir()
+
+	// 1. Negative test: imports system() but calls ABSOLUTE path "/usr/sbin/service"
 	safeSource := filepath.Join(tempDir, "safe_path.c")
 	safeBin := filepath.Join(tempDir, "safe_path_bin")
 	err = os.WriteFile(safeSource, []byte(`
@@ -116,12 +114,12 @@ int main() {
 		t.Fatalf("failed to write safe source: %v", err)
 	}
 
-	cmd = exec.Command("gcc", "-o", safeBin, safeSource)
+	cmd := exec.Command("gcc", "-o", safeBin, safeSource)
 	if err := cmd.Run(); err != nil {
 		t.Fatalf("failed to compile safe binary: %v", err)
 	}
 
-	match, err = AnalyzeDeepELF(safeBin)
+	match, err := AnalyzeDeepELF(safeBin)
 	if err != nil {
 		t.Fatalf("AnalyzeDeepELF returned error on safe binary: %v", err)
 	}
@@ -129,7 +127,7 @@ int main() {
 		t.Errorf("expected no match on absolute path execution, got: %+v", match)
 	}
 
-	// 3. Negative test: contains string "service" in printf but NEVER imports execution functions
+	// 2. Negative test: contains string "service" in printf but NEVER imports execution functions
 	noExecSource := filepath.Join(tempDir, "no_exec.c")
 	noExecBin := filepath.Join(tempDir, "no_exec_bin")
 	err = os.WriteFile(noExecSource, []byte(`
