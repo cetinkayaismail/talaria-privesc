@@ -7,6 +7,16 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #91 — Two-Tier Audit Architecture: Decouple Dynamic Adversarial Black-Box Testing (`.agents/skills/adversarial-review/*`, `.agents/skills/audit-orchestrator/*`)
+**Impact:** 🛡️ Elimination of white-box testing confirmation bias + 🧠 Independent adversarial black-box test agent
+
+- **ARCH-TIER-01 — Two-Tier Audit Separation (`.agents/skills/audit-orchestrator/SKILL.md`):** Decoupled dynamic adversarial testing from static code review. Tier 1 orchestrates static white-box code standards (Architecture, Security, Optimization, Code Hygiene, Static QA), while Tier 2 governs independent dynamic black-box testing.
+- **SKILL-ADV-02 — Adversarial Black-Box QA Skill (`.agents/skills/adversarial-review/SKILL.md`):** Created a dedicated testing skill derived directly from the proven structure of `qa-review/SKILL.md`. Enforces zero Go source code exposure, ephemeral Docker sandbox execution, confusion matrix verification (True Positive exploits vs. False Positive deceptive controls), and compiler optimization probing.
+
+**Files changed:** `.agents/skills/adversarial-review/SKILL.md` *(new)*, `.agents/skills/audit-orchestrator/SKILL.md`, `CHANGELOG.md`
+
+---
+
 ### #90 — Deep ELF String & PATH Hijack Analysis with 4-Layer Heuristic Filtering (`scanners/elf_deep.go`, `scanners/suid.go`, `cmd/*`, `USAGE.md`)
 **Impact:** 🎯 New detection vector for custom in-house root SUID binaries + 📉 Near-zero false positive rate (<3%) + ⚡ Sub-millisecond execution
 
