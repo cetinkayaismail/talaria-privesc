@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #93 — CLI Flag Validation Refactoring (`cmd/cli.go`)
+**Impact:** 🔧 Architecture standard compliance ($\le 80$ lines limit)
+
+- **ARCH-CLI-01 — Refactor ParseFlags (`cmd/cli.go`):** Extracted `validateConfig` helper function to modularize input validation for `--fail-on`, mutual exclusivity, encryption requirements, and format parameters. Reduced `ParseFlags` length from 84 lines to 62 lines in strict adherence to the project's $\le 80$ lines per function architecture limit.
+
+**Files changed:** `cmd/cli.go`, `CHANGELOG.md`
+
+---
+
 ### #92 — Resilient Capability Resolution for Unprivileged Users (`scanners/capabilities.go`)
 **Impact:** 🎯 False negative elimination on Debian/Ubuntu systems + 🛡️ Unprivileged privilege-escalation detection
 

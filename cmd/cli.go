@@ -82,33 +82,42 @@ func ParseFlags(args []string) (*Config, error) {
 		cfg.DeepELF = !cfg.AuditMode
 	}
 
+	if err := validateConfig(cfg); err != nil {
+		return nil, err
+	}
+
+	return cfg, nil
+}
+
+// validateConfig validates CLI configuration constraints and mutually exclusive flags.
+func validateConfig(cfg *Config) error {
 	// Validate FailOn flag if provided
 	if cfg.FailOn != "" {
 		normalized := strings.ToUpper(cfg.FailOn)
 		if normalized != "CRITICAL" && normalized != "HIGH" && normalized != "MEDIUM" {
-			return nil, fmt.Errorf("invalid --fail-on value '%s': must be CRITICAL, HIGH, or MEDIUM", cfg.FailOn)
+			return fmt.Errorf("invalid --fail-on value '%s': must be CRITICAL, HIGH, or MEDIUM", cfg.FailOn)
 		}
 		cfg.FailOn = normalized
 	}
 
 	// Validate mode mutual exclusivity
 	if cfg.CTFMode && cfg.AuditMode {
-		return nil, fmt.Errorf("cannot specify both --ctf and --audit modes")
+		return fmt.Errorf("cannot specify both --ctf and --audit modes")
 	}
 
 	// Validate encryption flag requires output file
 	if cfg.EncryptKey != "" && cfg.OutputFile == "" {
-		return nil, fmt.Errorf("--encrypt requires -o (output file path)")
+		return fmt.Errorf("--encrypt requires -o (output file path)")
 	}
 
 	// Validate report output format
 	fmtNorm := strings.ToLower(cfg.OutputFormat)
 	if fmtNorm != "text" && fmtNorm != "json" && fmtNorm != "sarif" {
-		return nil, fmt.Errorf("invalid --format value '%s': must be 'text', 'json', or 'sarif'", cfg.OutputFormat)
+		return fmt.Errorf("invalid --format value '%s': must be 'text', 'json', or 'sarif'", cfg.OutputFormat)
 	}
 	cfg.OutputFormat = fmtNorm
 
-	return cfg, nil
+	return nil
 }
 
 // PrintUsage prints the full CLI reference documentation.
