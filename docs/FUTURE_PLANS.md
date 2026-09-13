@@ -58,11 +58,6 @@ The following foundational milestones have been fully implemented, verified in D
 │ Release v2.5 │ Multi-Goal Graph & Probabilistic Engine  │ • Multi-Goal Dijkstra   │
 │              │                                          │ • Probabilistic Scoring │
 │              │                                          │ • Attack Graph Live SVG │
-├──────────────┼──────────────────────────────────────────┼─────────────────────────┤
-│ Release v2.6 │ Enterprise Automation & DevSecOps Suite  │ • Baseline Delta Audits │
-│              │                                          │ • Auto-Remediation Gen  │
-│              │                                          │ • SIEM Webhook Dispatch │
-│              │                                          │ • Interactive TUI Mode  │
 └──────────────┴──────────────────────────────────────────┴─────────────────────────┘
 ```
 
@@ -158,30 +153,6 @@ The following foundational milestones have been fully implemented, verified in D
 
 ---
 
-### Milestone v2.6: DevSecOps Automation & Enterprise Ecosystem
-
-#### 10. OPS-01 — Baseline Delta Auditing (`--baseline=approved.json`)
-- **Objective:** Enable CI/CD pipelines and DevSecOps teams to enforce a "no new security regressions" gate.
-- **Behavior:**
-  - Ingest an existing signed scan baseline.
-  - Compute a deterministic semantic diff between old and current findings.
-  - Emit exit code 1 only if **new** misconfigurations have been introduced, suppressing pre-existing accepted technical debt.
-
-#### 11. OPS-02 — Automated Bash Remediation Script Generator (`--generate-fix`)
-- **Objective:** Automatically produce an idempotent, dry-run-capable bash script that executes all recommended hardening commands.
-- **Behavior:**
-  - Assembles all scanner `Remediation` commands into an executable script.
-  - Includes `--dry-run` flag support, file permission backups (`cp -a`), and pre-execution state verification.
-
-#### 12. OPS-03 — Interactive Terminal UI Dashboard (`--interactive`)
-- **Objective:** Provide a low-overhead, curses-style terminal navigation interface for interactive pentesting and incident response.
-- **Behavior:**
-  - Interactive attack graph navigation using arrow keys.
-  - Instant copying of GTFOBins exploit one-liners to the system clipboard or OSC-52 terminal buffer.
-  - Real-time search and filter across all scanned categories.
-
----
-
 ## ⚖️ Strategic Optimization & Feasibility Matrix
 
 Every proposed roadmap item is evaluated against five standardized axes (1 = lowest/worst, 5 = highest/best):
@@ -197,9 +168,6 @@ Every proposed roadmap item is evaluated against five standardized axes (1 = low
 | **B6** | Distro Kernel CVE Backport Resolver | 5/5 | 5/5 | 4/5 | 4/5 | 3/5 | **21 / 25** | **P2 (v2.4)** |
 | **INT-01** | Configurable Multi-Goal DAG | 5/5 | 5/5 | 4/5 | 4/5 | 4/5 | **22 / 25** | **P2 (v2.5)** |
 | **INT-02** | Dynamic Probabilistic Weighting | 5/5 | 5/5 | 4/5 | 4/5 | 3/5 | **21 / 25** | **P3 (v2.5)** |
-| **OPS-01** | Baseline Delta Auditing | 5/5 | 5/5 | 4/5 | 4/5 | 4/5 | **22 / 25** | **P2 (v2.6)** |
-| **OPS-02** | Automated Remediation Script Generator | 5/5 | 5/5 | 4/5 | 5/5 | 4/5 | **23 / 25** | **P2 (v2.6)** |
-| **OPS-03** | Interactive TUI Dashboard | 4/5 | 5/5 | 3/5 | 3/5 | 2/5 | **17 / 25** | **P3 (v2.6)** |
 
 ---
 

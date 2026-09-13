@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #89 — Roadmap Refinement: Prune CI/CD Remediation & TUI Dashboard Plans (`docs/FUTURE_PLANS.md`, `FUTURE_PLANS.md`)
+**Impact:** 🔧 Streamlined roadmap focus purely on high-impact core detection & graph pathfinding
+
+- **ROADMAP-PRUNE-01 — Remove OPS-01, OPS-02, OPS-03 (`docs/FUTURE_PLANS.md`, `FUTURE_PLANS.md`):** Pruned CI/CD baseline delta auditing, automated remediation bash generation, and interactive curses TUI dashboard from future roadmap plans, refocusing project trajectory exclusively on high-speed kernel/container vulnerability detection, deep ELF analysis, and attack graph intelligence.
+
+**Files changed:** `docs/FUTURE_PLANS.md`, `FUTURE_PLANS.md`, `CHANGELOG.md`
+
+---
+
 ### #88 — Strategic Roadmap & Future Plans Documentation (`docs/FUTURE_PLANS.md`, `FUTURE_PLANS.md`, `README.md`, `docs/README.md`)
 **Impact:** 🗺️ Official strategic engineering roadmap & upcoming release deliverables + 📊 Evaluated scorecard matrix
 

@@ -23,10 +23,4 @@ The master strategic roadmap and future engineering plans for Talaria are mainta
   - Configurable multi-goal attack graph pathfinding (`--goal=root|breakout|credentials|persistence`).
   - Dynamic probabilistic edge weighting factoring ASLR, SELinux, and AppArmor confinement.
 
-- **v2.6 (DevSecOps Automation & Enterprise Suite):**
-  - CI/CD baseline delta auditing (`--baseline=prev.json`).
-  - Automated bash remediation script generation (`--generate-fix`).
-  - Interactive terminal UI dashboard (`--interactive`).
-  - SIEM and messaging webhook dispatchers.
-
 For full technical specifications, evaluation scorecards, and implementation priorities, see **[docs/FUTURE_PLANS.md](docs/FUTURE_PLANS.md)**.
