@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #92 — Resilient Capability Resolution for Unprivileged Users (`scanners/capabilities.go`)
+**Impact:** 🎯 False negative elimination on Debian/Ubuntu systems + 🛡️ Unprivileged privilege-escalation detection
+
+- **CAP-PATH-01 — Resilient getcap Binary Resolution (`scanners/capabilities.go`):** Added standard `/sbin` and `/usr/sbin` fallbacks to `ScanCapabilities` when `exec.LookPath("getcap")` fails. Unprivileged users on Debian, Ubuntu, and minimal container environments do not have `sbin` paths in `$PATH`, previously causing `ScanCapabilities` to silently fail to discover dangerous file capabilities like `cap_setuid+ep`. Discovered during adversarial black-box Docker testing.
+
+**Files changed:** `scanners/capabilities.go`, `CHANGELOG.md`
+
+---
+
 ### #91 — Two-Tier Audit Architecture: Decouple Dynamic Adversarial Black-Box Testing (`.agents/skills/adversarial-review/*`, `.agents/skills/audit-orchestrator/*`)
 **Impact:** 🛡️ Elimination of white-box testing confirmation bias + 🧠 Independent adversarial black-box test agent
 

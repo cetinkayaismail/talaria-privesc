@@ -2,6 +2,7 @@ package scanners
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -25,15 +26,34 @@ var DangerousCapabilities = []string{
 	"cap_sys_module", "cap_sys_boot", "cap_sys_chroot",
 }
 
+// findGetcapBinary locates the getcap executable, checking standard sbin paths
+// when not present in the caller's $PATH (common for unprivileged users on Debian/Ubuntu).
+func findGetcapBinary() string {
+	if p, err := exec.LookPath("getcap"); err == nil {
+		return p
+	}
+	for _, candidate := range []string{"/usr/sbin/getcap", "/sbin/getcap", "/usr/local/sbin/getcap"} {
+		if _, err := os.Stat(candidate); err == nil {
+			return candidate
+		}
+	}
+	return ""
+}
+
 // ScanCapabilities uses the native getcap binary to rapidly scan the filesystem.
 func ScanCapabilities(root string) ([]CapabilityResult, error) {
 	var results []CapabilityResult
+
+	getcapBin := findGetcapBinary()
+	if getcapBin == "" {
+		return results, nil
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	// Run getcap recursively with timeout boundary.
-	cmd := exec.CommandContext(ctx, "getcap", "-r", root)
+	cmd := exec.CommandContext(ctx, getcapBin, "-r", root)
 	output, _ := cmd.Output()
 
 	lines := strings.Split(string(output), "\n")
