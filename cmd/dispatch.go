@@ -103,7 +103,7 @@ func BuildModuleRegistry() []ModuleDescriptor {
 			Phase:   1,
 			NeedsIO: true,
 			Run: func(ctx *DispatchContext) error {
-				results, err := scanners.ScanSUID(ctx.Config.RootPath)
+				results, err := scanners.ScanSUID(ctx.Config.RootPath, ctx.Config.DeepELF)
 				if err != nil {
 					return err
 				}

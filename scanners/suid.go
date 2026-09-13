@@ -55,159 +55,160 @@ func hasAppArmorProfile(name string) bool {
 	return strings.Contains(cachedApparmorProfiles, name)
 }
 
-func ScanSUID(root string) ([]SUIDResult, error) {
-	var results []SUIDResult
+// Standard system SUID binaries that are safe/necessary — skip these to
+// avoid noise. They are legitimate and well-audited.
+var systemSUIDBinaries = map[string]bool{
+	"chfn": true, "chsh": true, "gpasswd": true, "newgidmap": true,
+	"newuidmap": true, "passwd": true, "su": true, "sudo": true,
+	"pkexec": true, "mount": true, "umount": true, "ping": true, "ping6": true,
+	"traceroute": true, "traceroute6": true, "at": true, "newgrp": true,
+	"doas": true, "ssh-keysign": true, "fusermount": true, "fusermount3": true,
+}
 
-	// Standard system SUID binaries that are safe/necessary — skip these to
-	// avoid noise. They are legitimate and well-audited.
-	systemSUIDBinaries := map[string]bool{
-		"chfn": true, "chsh": true, "gpasswd": true, "newgidmap": true,
-		"newuidmap": true, "passwd": true, "su": true, "sudo": true,
-		"pkexec": true, "mount": true, "umount": true, "ping": true, "ping6": true,
-		"traceroute": true, "traceroute6": true, "at": true, "newgrp": true,
-		"doas": true, "ssh-keysign": true, "fusermount": true, "fusermount3": true,
+func isSandboxedApp(path string) bool {
+	if strings.HasPrefix(path, "/snap/") && hasAppArmorProfile("snap.") {
+		return true
+	}
+	if (strings.Contains(path, "/flatpak/") || strings.HasPrefix(path, "/var/lib/flatpak/")) && hasAppArmorProfile("flatpak") {
+		return true
+	}
+	return false
+}
+
+func formatGTFORisk(entry gtfobinsEntry, isRootOwned bool, uid uint32) string {
+	var caps []string
+	if entry.Shell {
+		caps = append(caps, "shell")
+	}
+	if entry.FileRead {
+		caps = append(caps, "file-read")
+	}
+	if entry.FileWrite {
+		caps = append(caps, "file-write")
+	}
+	capStr := strings.Join(caps, ", ")
+	if capStr == "" {
+		capStr = "privilege-escalation"
+	}
+	if isRootOwned {
+		return fmt.Sprintf("GTFOBins match — SUID capabilities: [%s]. Can be abused for privilege escalation to root.", capStr)
+	}
+	return fmt.Sprintf("GTFOBins match — SUID capabilities: [%s]. Owned by UID %d — lateral movement / user pivoting risk.", capStr, uid)
+}
+
+func checkInterpreterLibraries(fileNameLower string) []string {
+	switch fileNameLower {
+	case "python", "python2", "python3":
+		return checkWritableDirs([]string{
+			"/usr/local/lib/python3.8/dist-packages", "/usr/local/lib/python3.9/dist-packages",
+			"/usr/local/lib/python3.10/dist-packages", "/usr/local/lib/python3.11/dist-packages",
+			"/usr/local/lib/python3.12/dist-packages",
+			"/usr/lib/python3/dist-packages", "/usr/lib/python3.8/site-packages",
+			"/usr/lib/python3.9/site-packages", "/usr/lib/python3.10/site-packages",
+		})
+	case "perl":
+		return checkWritableDirs([]string{
+			"/usr/local/lib/site_perl", "/usr/lib/x86_64-linux-gnu/perl5/5.30",
+			"/usr/lib/x86_64-linux-gnu/perl5/5.34", "/usr/share/perl5",
+		})
+	case "ruby":
+		return checkWritableDirs([]string{
+			"/usr/local/lib/site_ruby", "/var/lib/gems",
+		})
+	}
+	return nil
+}
+
+func evaluateSUIDBinary(path string, info os.FileInfo, runDeepELF bool) (SUIDResult, bool) {
+	if isSandboxedApp(path) {
+		return SUIDResult{}, false
+	}
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return SUIDResult{}, false
+	}
+	isRootOwned := (stat.Uid == 0)
+	fileNameLower := strings.ToLower(filepath.Base(path))
+
+	if systemSUIDBinaries[fileNameLower] {
+		return SUIDResult{}, false
 	}
 
-	// walkpool.Walk handles ShouldIgnore at the dispatcher level (SkipDir semantics).
-	// Entries are delivered one at a time; appends to results are single-threaded.
-	for entry := range walkpool.Walk(context.Background(), root, poolWorkers(), ShouldIgnore) {
-		path := entry.Path
-		d := entry.Entry
+	gtfoEntry, inGTFOBins := LookupGTFOBin(fileNameLower)
+	isDangerous := false
+	reason := ""
+	var writableLibs []string
 
-		info, err := d.Info()
-		if err != nil {
+	if inGTFOBins && gtfoEntry.SUID {
+		isDangerous = true
+		reason = formatGTFORisk(gtfoEntry, isRootOwned, stat.Uid)
+		writableLibs = checkInterpreterLibraries(fileNameLower)
+		if len(writableLibs) > 0 {
+			reason += " | POTENTIAL HIJACKING: Writable library paths found."
+		}
+	}
+
+	rpathDirs := checkRPATH(path)
+	if len(rpathDirs) > 0 {
+		isDangerous = true
+		reason += " | SO HIJACKING: Writable RPATH/RUNPATH found: " + strings.Join(rpathDirs, ", ")
+		writableLibs = append(writableLibs, rpathDirs...)
+	}
+
+	exploitHint := ""
+	if inGTFOBins && gtfoEntry.ExploitHint != "" {
+		exploitHint = gtfoEntry.ExploitHint
+	} else if isDangerous {
+		exploitHint = GetExploitHint(path, "suid")
+		if exploitHint == "" {
+			exploitHint = "Create a malicious .so in one of the writable paths and run the binary."
+		}
+	}
+
+	// Filter 1: Deep ELF String & PATH Hijack Analysis for custom root SUID binaries
+	if !isDangerous && runDeepELF && isRootOwned && !inGTFOBins {
+		if match, err := AnalyzeDeepELF(path); err == nil && match != nil {
+			isDangerous = true
+			reason = fmt.Sprintf(
+				"Deep ELF Analysis: custom root SUID binary imports libc '%s()' and calls relative command '%s' (from string \"%s\") without absolute path — vulnerable to PATH hijacking.",
+				match.ExecSymbol, match.Command, match.RawString,
+			)
+			exploitHint = fmt.Sprintf(
+				"PATH hijack: create malicious executable /tmp/%s, export PATH=/tmp:$PATH, and execute %s",
+				match.Command, path,
+			)
+		}
+	}
+
+	remediation := ""
+	complianceTag := ""
+	if isDangerous {
+		remediation = fmt.Sprintf("chmod u-s %s", path)
+		complianceTag = "CIS-Linux-6.1.13 / NIST-AC-6(1)"
+	}
+
+	return SUIDResult{
+		Path:                 path,
+		IsDangerous:          isDangerous,
+		Reason:               reason,
+		WritableLibraryPaths: writableLibs,
+		ExploitHint:          exploitHint,
+		Remediation:          remediation,
+		ComplianceTag:        complianceTag,
+	}, true
+}
+
+func ScanSUID(root string, deepELF ...bool) ([]SUIDResult, error) {
+	var results []SUIDResult
+	runDeepELF := len(deepELF) > 0 && deepELF[0]
+
+	for entry := range walkpool.Walk(context.Background(), root, poolWorkers(), ShouldIgnore) {
+		info, err := entry.Entry.Info()
+		if err != nil || info.Mode()&os.ModeSetuid == 0 {
 			continue
 		}
-
-		// Check for SUID bit
-		if info.Mode()&os.ModeSetuid != 0 {
-			// --- FP Reduction for SUID Sandbox and Ownership ---
-			// 1. Skip sandboxed apps (Snap/Flatpak) ONLY if their AppArmor profiles are active/loaded
-			if strings.HasPrefix(path, "/snap/") {
-				if hasAppArmorProfile("snap.") {
-					continue
-				}
-			} else if strings.Contains(path, "/flatpak/") || strings.HasPrefix(path, "/var/lib/flatpak/") {
-				if hasAppArmorProfile("flatpak") {
-					continue
-				}
-			}
-
-			// 2. Extract stat and check ownership
-			stat, ok := info.Sys().(*syscall.Stat_t)
-			if !ok {
-				continue
-			}
-			isRootOwned := (stat.Uid == 0)
-
-			fileName := filepath.Base(path)
-			fileNameLower := strings.ToLower(fileName)
-
-			// Skip standard system SUID binaries to prevent noise
-			if _, isSystemBinary := systemSUIDBinaries[fileNameLower]; isSystemBinary {
-				continue
-			}
-
-			// GTFOBins JSON lookup — covers 380+ binaries vs the old 30-entry map.
-			gtfoEntry, inGTFOBins := LookupGTFOBin(fileNameLower)
-
-			isDangerous := false
-			reason := ""
-			var writableLibs []string
-
-			if inGTFOBins && gtfoEntry.SUID {
-				isDangerous = true
-
-				// Build a concise capability tag string for the reason
-				var caps []string
-				if gtfoEntry.Shell {
-					caps = append(caps, "shell")
-				}
-				if gtfoEntry.FileRead {
-					caps = append(caps, "file-read")
-				}
-				if gtfoEntry.FileWrite {
-					caps = append(caps, "file-write")
-				}
-				capStr := strings.Join(caps, ", ")
-				if capStr == "" {
-					capStr = "privilege-escalation"
-				}
-
-				if isRootOwned {
-					reason = fmt.Sprintf(
-						"GTFOBins match — SUID capabilities: [%s]. Can be abused for privilege escalation to root.",
-						capStr,
-					)
-				} else {
-					reason = fmt.Sprintf(
-						"GTFOBins match — SUID capabilities: [%s]. Owned by UID %d — lateral movement / user pivoting risk.",
-						capStr, stat.Uid,
-					)
-				}
-
-				// Check interpreter-specific writable library paths
-				switch fileNameLower {
-				case "python", "python2", "python3":
-					writableLibs = checkWritableDirs([]string{
-						"/usr/local/lib/python3.8/dist-packages", "/usr/local/lib/python3.9/dist-packages",
-						"/usr/local/lib/python3.10/dist-packages", "/usr/local/lib/python3.11/dist-packages",
-						"/usr/local/lib/python3.12/dist-packages",
-						"/usr/lib/python3/dist-packages", "/usr/lib/python3.8/site-packages",
-						"/usr/lib/python3.9/site-packages", "/usr/lib/python3.10/site-packages",
-					})
-				case "perl":
-					writableLibs = checkWritableDirs([]string{
-						"/usr/local/lib/site_perl", "/usr/lib/x86_64-linux-gnu/perl5/5.30",
-						"/usr/lib/x86_64-linux-gnu/perl5/5.34", "/usr/share/perl5",
-					})
-				case "ruby":
-					writableLibs = checkWritableDirs([]string{
-						"/usr/local/lib/site_ruby", "/var/lib/gems",
-					})
-				}
-				if len(writableLibs) > 0 {
-					reason += " | POTENTIAL HIJACKING: Writable library paths found."
-				}
-			}
-
-			// ELF RPATH/RUNPATH Analysis (SO Hijacking)
-			rpathDirs := checkRPATH(path)
-			if len(rpathDirs) > 0 {
-				isDangerous = true
-				reason += " | SO HIJACKING: Writable RPATH/RUNPATH found: " + strings.Join(rpathDirs, ", ")
-				writableLibs = append(writableLibs, rpathDirs...)
-			}
-
-			exploitHint := ""
-			if isDangerous {
-				// Use exploit hint from GTFOBins JSON if available
-				if inGTFOBins && gtfoEntry.ExploitHint != "" {
-					exploitHint = gtfoEntry.ExploitHint
-				} else {
-					exploitHint = GetExploitHint(path, "suid")
-				}
-				if exploitHint == "" {
-					exploitHint = "Create a malicious .so in one of the writable paths and run the binary."
-				}
-			}
-
-			remediation := ""
-			complianceTag := ""
-			if isDangerous {
-				remediation = fmt.Sprintf("chmod u-s %s", path)
-				complianceTag = "CIS-Linux-6.1.13 / NIST-AC-6(1)"
-			}
-
-			results = append(results, SUIDResult{
-				Path:                 path,
-				IsDangerous:          isDangerous,
-				Reason:               reason,
-				WritableLibraryPaths: writableLibs,
-				ExploitHint:          exploitHint,
-				Remediation:          remediation,
-				ComplianceTag:        complianceTag,
-			})
+		if res, ok := evaluateSUIDBinary(entry.Path, info, runDeepELF); ok {
+			results = append(results, res)
 		}
 	}
 

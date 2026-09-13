@@ -22,6 +22,7 @@ type Config struct {
 	NoColor        bool
 	QuietMode      bool   // Phase 4: Suppress interactive banners for CI/CD pipelines
 	FailOn         string // Phase 4: CI/CD policy threshold: CRITICAL, HIGH, MEDIUM
+	DeepELF        bool   // Deep ELF string analysis & PATH hijack auditing on custom SUID binaries
 }
 
 // ParseFlags registers and parses all command-line arguments.
@@ -49,6 +50,9 @@ func ParseFlags(args []string) (*Config, error) {
 	fs.BoolVar(&cfg.ShowUI, "ui", false, "Enable visual summary dashboard card.")
 	fs.BoolVar(&cfg.NoColor, "no-color", false, "Disable ANSI colors.")
 
+	var deepElfFlag bool
+	fs.BoolVar(&deepElfFlag, "deep-elf", false, "Enable deep ELF string analysis and PATH hijack auditing on custom SUID binaries.")
+
 	// Phase 4 CI/CD Flags
 	fs.StringVar(&cfg.FailOn, "fail-on", "", "CI/CD Policy Gate: Exit code 1 if findings meet or exceed severity (CRITICAL, HIGH, MEDIUM).")
 	fs.BoolVar(&cfg.QuietMode, "quiet", false, "Pipeline mode: suppress ASCII banners and animated headers.")
@@ -60,6 +64,22 @@ func ParseFlags(args []string) (*Config, error) {
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
+	}
+
+	// Resolve DeepELF flag mode defaults:
+	// 1. Explicit --deep-elf overrides any mode default.
+	// 2. Otherwise auto-enabled in CTF/default mode (!cfg.AuditMode).
+	// 3. Otherwise auto-disabled in Audit mode (cfg.AuditMode).
+	deepElfExplicit := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "deep-elf" {
+			deepElfExplicit = true
+		}
+	})
+	if deepElfExplicit {
+		cfg.DeepELF = deepElfFlag
+	} else {
+		cfg.DeepELF = !cfg.AuditMode
 	}
 
 	// Validate FailOn flag if provided
@@ -109,6 +129,7 @@ func PrintUsage() {
 	fmt.Println("  --audit              Audit / compliance mode: remediation commands and CIS/NIST tags")
 	fmt.Println("  --professional       Alias for --audit")
 	fmt.Println("  --p                  Alias for --audit (shorthand)")
+	fmt.Println("  --deep-elf           Enable deep ELF string analysis and PATH hijack auditing on custom SUID binaries (auto in CTF)")
 	fmt.Println("\nCI/CD & AUTOMATION (PHASE 4):")
 	fmt.Println("  --fail-on=SEVERITY   Exit code 1 if findings meet or exceed threshold (CRITICAL, HIGH, MEDIUM)")
 	fmt.Println("  --quiet, -q          Pipeline mode: suppress banner and decorative output for CI/CD logs")

@@ -68,6 +68,7 @@ The following foundational milestones have been fully implemented, verified in D
 ### Milestone v2.3: Deep Inspection & Capability Expansion
 
 #### 1. B2 — Deep ELF String & Disassembly Analysis (`--deep-elf`)
+**Status: ✅ DONE (Release #90)**
 - **Objective:** Detect custom in-house root SUID/SGID binaries (common in CTFs, proprietary server appliances, and internal pentests) that call external binaries via relative paths (`system("service status")` instead of `/usr/sbin/service`).
 - **Technical Design:**
   - Parse ELF binaries using standard library `debug/elf`.
@@ -159,7 +160,7 @@ Every proposed roadmap item is evaluated against five standardized axes (1 = low
 
 | ID | Initiative Name | Speed (1–5) | FP Safety (1–5) | Vector Impact (1–5) | Arch Stability (1–5) | Implementation Ease (1–5) | Overall Score | Priority |
 |:---|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **B2** | Deep ELF String Analysis (`--deep-elf`) | 4/5 | 4/5 | 5/5 | 4/5 | 4/5 | **21 / 25** | **P1 (v2.3)** |
+| **B2** | Deep ELF String Analysis (`--deep-elf`) | 4/5 | 4/5 | 5/5 | 4/5 | 4/5 | **21 / 25** | ✅ DONE (#90) |
 | **SCN-01** | D-Bus System Policy Auditor | 5/5 | 5/5 | 4/5 | 5/5 | 4/5 | **23 / 25** | **P1 (v2.3)** |
 | **SCN-02** | Expanded Linux Capability Matrix | 5/5 | 5/5 | 5/5 | 5/5 | 4/5 | **24 / 25** | **P1 (v2.3)** |
 | **SCN-03** | Mail Spool & Log Secret Harvester | 4/5 | 3/5 | 4/5 | 4/5 | 3/5 | **18 / 25** | **P2 (v2.3)** |

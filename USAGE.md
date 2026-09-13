@@ -78,6 +78,7 @@ Provide sudo authentication non-interactively to audit `sudo -l` rules:
 | `--ctf` | `true` | bool | CTF / offensive mode: focuses on rapid root escalation, exploit 1-liners, and cleartext credentials (default). |
 | `--audit` | `false` | bool | Blue team audit / compliance mode: focuses on remediation fix commands, masked credentials, CIS tags. |
 | `--professional`, `-p` | `false` | bool | Alias for `--audit`. |
+| `--deep-elf` | `auto` | bool | Deep ELF string analysis & PATH hijack auditing on custom SUID binaries (auto in CTF, disabled in audit). |
 
 ### Presentation & Formatting Flags
 
