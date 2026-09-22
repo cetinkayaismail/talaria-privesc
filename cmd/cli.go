@@ -42,8 +42,8 @@ func ParseFlags(args []string) (*Config, error) {
 	fs.IntVar(&cfg.IOLimit, "io-limit", 0, "Max concurrent I/O scanners (default: auto based on RLIMIT_NOFILE).")
 	fs.StringVar(&cfg.EncryptKey, "encrypt", "", "Encrypt saved report with AES-256-GCM using this passphrase (requires -o).")
 
-	fs.BoolVar(&cfg.CTFMode, "ctf", false, "CTF / offensive mode: focuses on rapid root escalation and GTFOBins 1-liners (default).")
-	fs.BoolVar(&cfg.AuditMode, "audit", false, "Audit / compliance mode: focuses on remediation fix commands and CIS tags.")
+	fs.BoolVar(&cfg.CTFMode, "ctf", false, "CTF / offensive mode: focuses on rapid root escalation and GTFOBins 1-liners.")
+	fs.BoolVar(&cfg.AuditMode, "audit", false, "Audit / compliance mode: focuses on remediation fix commands and CIS tags (default).")
 	fs.BoolVar(&cfg.AuditMode, "professional", false, "Alias for --audit.")
 	fs.BoolVar(&cfg.AuditMode, "p", false, "Alias for --audit (shorthand).")
 
@@ -66,10 +66,15 @@ func ParseFlags(args []string) (*Config, error) {
 		return nil, err
 	}
 
+	// Mode resolution: Default to Audit mode unless --ctf is explicitly requested.
+	if !cfg.CTFMode && !cfg.AuditMode {
+		cfg.AuditMode = true
+	}
+
 	// Resolve DeepELF flag mode defaults:
 	// 1. Explicit --deep-elf overrides any mode default.
-	// 2. Otherwise auto-enabled in CTF/default mode (!cfg.AuditMode).
-	// 3. Otherwise auto-disabled in Audit mode (cfg.AuditMode).
+	// 2. Auto-enabled in CTF mode (cfg.CTFMode).
+	// 3. Auto-disabled in Audit mode (cfg.AuditMode, default).
 	deepElfExplicit := false
 	fs.Visit(func(f *flag.Flag) {
 		if f.Name == "deep-elf" {
@@ -79,7 +84,7 @@ func ParseFlags(args []string) (*Config, error) {
 	if deepElfExplicit {
 		cfg.DeepELF = deepElfFlag
 	} else {
-		cfg.DeepELF = !cfg.AuditMode
+		cfg.DeepELF = cfg.CTFMode
 	}
 
 	if err := validateConfig(cfg); err != nil {
@@ -134,10 +139,10 @@ func PrintUsage() {
 	fmt.Println("  --io-limit           Max concurrent I/O scanners (default: auto based on RLIMIT_NOFILE)")
 	fmt.Println("  --encrypt            Encrypt saved report with AES-256-GCM using this passphrase (requires -o)")
 	fmt.Println("\nOPERATIONAL MODES:")
-	fmt.Println("  --ctf                CTF / offensive mode: rapid root escalation and GTFOBins exploits (default)")
-	fmt.Println("  --audit              Audit / compliance mode: remediation commands and CIS/NIST tags")
+	fmt.Println("  --audit              Audit / compliance mode: remediation commands and CIS/NIST tags (default)")
 	fmt.Println("  --professional       Alias for --audit")
 	fmt.Println("  --p                  Alias for --audit (shorthand)")
+	fmt.Println("  --ctf                CTF / offensive mode: rapid root escalation and GTFOBins exploits")
 	fmt.Println("  --deep-elf           Enable deep ELF string analysis and PATH hijack auditing on custom SUID binaries (auto in CTF)")
 	fmt.Println("\nCI/CD & AUTOMATION (PHASE 4):")
 	fmt.Println("  --fail-on=SEVERITY   Exit code 1 if findings meet or exceed threshold (CRITICAL, HIGH, MEDIUM)")

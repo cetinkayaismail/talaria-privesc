@@ -7,6 +7,17 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #98 — Set Audit Mode as Default CLI Operational Mode (`cmd/*`, `USAGE.md`, `README.md`)
+**Impact:** 🛡️ Safe-by-default enterprise posture + institutional credential masking enabled out-of-the-box
+
+- **CLI-MODE-01 — Default to Audit Mode (`cmd/cli.go`, `cmd/cli_test.go`):** Reconfigured CLI flag resolution so that running `./talaria` without mode flags defaults to `--audit` (compliance remediation commands, CIS/NIST tags, and credential masking enabled; GTFOBins exploit spam suppressed). Offensive mode is explicitly accessible via `--ctf`.
+- **CLI-MODE-02 — DeepELF Resolution Alignment (`cmd/cli.go`):** Adjusted DeepELF auto-enabling so it remains disabled by default in Audit mode and auto-enabled when `--ctf` is passed, while continuing to support explicit `--deep-elf` overrides.
+- **DOC-MODE-03 — Documentation Updates (`USAGE.md`, `README.md`):** Updated default tables, CLI recipe guides, and help output references to reflect the enterprise-first default profile.
+
+**Files changed:** `cmd/cli.go`, `cmd/cli_test.go`, `USAGE.md`, `README.md`, `CHANGELOG.md`
+
+---
+
 ### #97 — Eliminate Go Formatting Drift in CLI Test Suite (`cmd/cli_test.go`)
 **Impact:** 🔧 Zero CI/CD formatting drift enforcement
 

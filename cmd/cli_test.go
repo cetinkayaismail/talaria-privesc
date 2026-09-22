@@ -80,46 +80,73 @@ func TestParseFlagsInvalidFormat(t *testing.T) {
 }
 
 func TestParseFlagsDeepELFResolution(t *testing.T) {
-	// 1. Default (CTF mode) should auto-enable DeepELF
+	// 1. Default mode (neither passed) should default to AuditMode with DeepELF disabled
 	cfgDefault, err := ParseFlags([]string{})
 	if err != nil {
 		t.Fatalf("unexpected error on default flags: %v", err)
 	}
-	if !cfgDefault.DeepELF {
+	if !cfgDefault.AuditMode {
+		t.Errorf("expected AuditMode to be true by default")
+	}
+	if cfgDefault.CTFMode {
+		t.Errorf("expected CTFMode to be false by default")
+	}
+	if cfgDefault.DeepELF {
+		t.Errorf("expected DeepELF to be false by default in Audit mode")
+	}
+
+	// 2. CTF mode (--ctf) should enable CTFMode and auto-enable DeepELF
+	cfgCTF, err := ParseFlags([]string{"--ctf"})
+	if err != nil {
+		t.Fatalf("unexpected error on --ctf: %v", err)
+	}
+	if !cfgCTF.CTFMode {
+		t.Errorf("expected CTFMode to be true on --ctf")
+	}
+	if cfgCTF.AuditMode {
+		t.Errorf("expected AuditMode to be false on --ctf")
+	}
+	if !cfgCTF.DeepELF {
 		t.Errorf("expected DeepELF to be true by default in CTF mode")
 	}
 
-	// 2. Audit mode (--audit) should auto-disable DeepELF
+	// 3. Audit mode (--audit) should keep DeepELF disabled
 	cfgAudit, err := ParseFlags([]string{"--audit"})
 	if err != nil {
 		t.Fatalf("unexpected error on --audit: %v", err)
+	}
+	if !cfgAudit.AuditMode {
+		t.Errorf("expected AuditMode to be true on --audit")
 	}
 	if cfgAudit.DeepELF {
 		t.Errorf("expected DeepELF to be false by default in Audit mode")
 	}
 
-	// 3. Shorthand audit (-p) should also auto-disable DeepELF
+	// 4. Shorthand audit (-p) should also keep DeepELF disabled
 	cfgP, err := ParseFlags([]string{"-p"})
 	if err != nil {
 		t.Fatalf("unexpected error on -p: %v", err)
+	}
+	if !cfgP.AuditMode {
+		t.Errorf("expected AuditMode to be true on -p")
 	}
 	if cfgP.DeepELF {
 		t.Errorf("expected DeepELF to be false by default in -p mode")
 	}
 
-	// 4. Audit mode with explicit --deep-elf should enable DeepELF
-	cfgAuditExplicit, err := ParseFlags([]string{"--audit", "--deep-elf"})
+	// 5. Default/Audit mode with explicit --deep-elf should enable DeepELF
+	cfgAuditExplicit, err := ParseFlags([]string{"--deep-elf"})
 	if err != nil {
-		t.Fatalf("unexpected error on --audit --deep-elf: %v", err)
+		t.Fatalf("unexpected error on --deep-elf: %v", err)
 	}
 	if !cfgAuditExplicit.DeepELF {
-		t.Errorf("expected DeepELF to be true when explicitly passed with --audit")
+		t.Errorf("expected DeepELF to be true when explicitly passed with default audit mode")
 	}
 
-	// 5. Explicit --deep-elf=false in CTF mode should disable DeepELF
-	cfgCTFDisabled, err := ParseFlags([]string{"--deep-elf=false"})
+	// 6. Explicit --deep-elf=false in CTF mode should disable DeepELF
+	cfgCTFDisabled, err := ParseFlags([]string{"--ctf", "--deep-elf=false"})
 	if err != nil {
-		t.Fatalf("unexpected error on --deep-elf=false: %v", err)
+		t.Fatalf("unexpected error on --ctf --deep-elf=false: %v", err)
 	}
 	if cfgCTFDisabled.DeepELF {
 		t.Errorf("expected DeepELF to be false when explicitly passed as false")

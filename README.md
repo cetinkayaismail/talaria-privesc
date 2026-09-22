@@ -135,16 +135,16 @@ Talaria detects backport-aware 2026 Linux kernel vulnerabilities (Dirty Frag, Fr
 
 ## 💡 Common Recipes & CLI Examples
 
-### 1. Offensive Assessment (CTF / Rapid Pentest)
-Stream findings with instant exploit one-liners and cleartext credentials:
-```bash
-./talaria --scan all --ctf
-```
-
-### 2. Enterprise Compliance Audit (Credential Masking)
+### 1. Enterprise Compliance Audit (Default — Credential Masking)
 Audit production servers with sanitized credential output and CIS/NIST remediation commands:
 ```bash
-./talaria --scan all -p
+./talaria --scan all
+```
+
+### 2. Offensive Assessment (CTF / Rapid Pentest)
+Stream findings with instant exploit one-liners, cleartext credentials, and deep ELF analysis:
+```bash
+./talaria --scan all --ctf
 ```
 
 ### 3. Targeted Audit (Specific Modules)
