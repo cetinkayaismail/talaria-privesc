@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #97 — Eliminate Go Formatting Drift in CLI Test Suite (`cmd/cli_test.go`)
+**Impact:** 🔧 Zero CI/CD formatting drift enforcement
+
+- **FMT-CLI-01 — Remove Redundant Trailing Newline (`cmd/cli_test.go`):** Cleaned up duplicate trailing newline at the end of `cmd/cli_test.go` to strictly satisfy `gofmt -d .` verification across all CI/CD matrix runners.
+
+**Files changed:** `cmd/cli_test.go`, `CHANGELOG.md`
+
+---
+
 ### #96 — Critical Bug Fixes in ELF RPATH Dynamic Loader, Kernel Config Parser, and Container Privilege Evaluator (`scanners/*`, `cmd/*`)
 **Impact:** 🔴 Restores 100% blind ELF RPATH detection + 🔴 Eliminates runtime panic in container scan + 🎯 Fixes unset kernel config parsing
 

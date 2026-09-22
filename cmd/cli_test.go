@@ -125,4 +125,3 @@ func TestParseFlagsDeepELFResolution(t *testing.T) {
 		t.Errorf("expected DeepELF to be false when explicitly passed as false")
 	}
 }
-
