@@ -104,7 +104,7 @@ func scanAtJobsInternal(atdActive bool, spoolDirs []string, atAllowPath, atDenyP
 						Path:          spoolDir,
 						RiskLevel:     "CRITICAL",
 						Reason:        fmt.Sprintf("at daemon spool directory '%s' is writable by current user — attacker can schedule arbitrary jobs executing as root", spoolDir),
-						ExploitHint:   fmt.Sprintf("echo 'chmod +s /bin/bash' | at now + 1 minute"),
+						ExploitHint:   "echo 'chmod +s /bin/bash' | at now + 1 minute",
 						Remediation:   fmt.Sprintf("chown daemon:daemon %s && chmod 0770 %s", spoolDir, spoolDir),
 						ComplianceTag: "CIS-Linux-5.1.8",
 						IsDangerous:   true,

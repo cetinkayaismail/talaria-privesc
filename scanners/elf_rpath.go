@@ -31,13 +31,7 @@ func ScanELFRPathAuditor(suidResults []SUIDResult) ([]ELFRPathResult, error) {
 			continue
 		}
 
-		file, err := os.Open(suid.Path)
-		if err != nil {
-			continue
-		}
-
-		elfFile, err := elf.NewFile(file)
-		file.Close()
+		elfFile, err := elf.Open(suid.Path)
 		if err != nil {
 			continue
 		}
@@ -45,6 +39,7 @@ func ScanELFRPathAuditor(suidResults []SUIDResult) ([]ELFRPathResult, error) {
 		// Inspect RPATH and RUNPATH dynamic tags
 		rpaths, _ := elfFile.DynString(elf.DT_RPATH)
 		runpaths, _ := elfFile.DynString(elf.DT_RUNPATH)
+		elfFile.Close()
 
 		checkTags(suid.Path, "RPATH", rpaths, userCtx, &results)
 		checkTags(suid.Path, "RUNPATH", runpaths, userCtx, &results)
@@ -62,14 +57,18 @@ func checkTags(binaryPath string, tagType string, paths []string, userCtx *UserC
 				continue
 			}
 
-			// 1. Check for relative directory (.) or empty entry
-			if dir == "." || dir == "./" || !strings.HasPrefix(dir, "/") && !strings.HasPrefix(dir, "$ORIGIN") {
+			// 1. Check for relative directory (.) or empty entry or $ORIGIN traversal
+			if dir == "." || dir == "./" || (!strings.HasPrefix(dir, "/") && !strings.HasPrefix(dir, "$ORIGIN")) || strings.Contains(dir, "$ORIGIN/..") {
+				reason := fmt.Sprintf("SUID binary '%s' contains relative %s directory '%s' — allows shared library hijacking by creating malicious .so in current working directory", binaryPath, tagType, dir)
+				if strings.Contains(dir, "$ORIGIN/..") {
+					reason = fmt.Sprintf("SUID binary '%s' uses $ORIGIN traversal in %s '%s' — allows shared library hijacking outside the binary directory", binaryPath, tagType, dir)
+				}
 				*results = append(*results, ELFRPathResult{
 					Path:          binaryPath,
 					TagType:       tagType,
 					Value:         dir,
 					RiskLevel:     "CRITICAL",
-					Reason:        fmt.Sprintf("SUID binary '%s' contains relative %s directory '%s' — allows shared library hijacking by creating malicious .so in current working directory", binaryPath, tagType, dir),
+					Reason:        reason,
 					ExploitHint:   fmt.Sprintf("gcc -shared -fPIC -o %s/evil.so evil.c && cd <dir> && %s", dir, binaryPath),
 					Remediation:   fmt.Sprintf("chrpath -d %s (or recompile binary without relative %s)", binaryPath, tagType),
 					ComplianceTag: "CIS-Linux-5.4.2 / NIST-SI-7",

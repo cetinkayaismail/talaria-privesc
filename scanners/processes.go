@@ -58,11 +58,8 @@ func ScanProcesses() ([]ProcessResult, error) {
 	var results []ProcessResult
 
 	// Get current user context to filter out own processes
-	currentUser, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-	currentUID, _ := strconv.Atoi(currentUser.Uid)
+	userCtx := GetUserContext()
+	currentUID := userCtx.UID
 	userShells := getSystemUserShells()
 
 	snap, err := GetProcSnapshot()

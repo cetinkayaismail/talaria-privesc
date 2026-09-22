@@ -91,8 +91,8 @@ func ScanContainer() ([]ContainerEscapeResult, error) {
 			// CapEff: ffffffffffffffff means ALL capabilities (privileged)
 			if strings.HasPrefix(line, "CapEff:") {
 				fields := strings.Fields(line)
-				if len(fields) >= 2 && strings.ToLower(fields[1]) == "000001ffffffffff" ||
-					strings.ToLower(fields[1]) == "ffffffffffffffff" {
+				if len(fields) >= 2 && (strings.ToLower(fields[1]) == "000001ffffffffff" ||
+					strings.ToLower(fields[1]) == "ffffffffffffffff") {
 					results = append(results, ContainerEscapeResult{
 						Vector:        "Privileged Container",
 						IsDangerous:   true,

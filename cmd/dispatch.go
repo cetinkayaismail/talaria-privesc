@@ -1736,14 +1736,14 @@ func runPhase(ctx *DispatchContext, registry []ModuleDescriptor, phase int) {
 		}
 
 		wg.Add(1)
-		go func() {
+		go func(m ModuleDescriptor) {
 			defer wg.Done()
-			if mod.NeedsIO && ctx.IOSemaphore != nil {
+			if m.NeedsIO && ctx.IOSemaphore != nil {
 				ctx.IOSemaphore <- struct{}{}
 				defer func() { <-ctx.IOSemaphore }()
 			}
-			_ = mod.Run(ctx)
-		}()
+			_ = m.Run(ctx)
+		}(mod)
 	}
 
 	wg.Wait()

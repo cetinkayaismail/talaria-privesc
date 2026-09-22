@@ -161,10 +161,8 @@ func RunIntelligenceEngine(report *models.ScanReport) {
 			paths, bestPath := graph.FindPathsAndBest(startNode, goal, 5)
 
 			bestPathKey := ""
-			if bestPath != nil {
-				for _, e := range bestPath {
-					bestPathKey += e.From.ID + e.To.ID
-				}
+			for _, e := range bestPath {
+				bestPathKey += e.From.ID + e.To.ID
 			}
 
 			for _, path := range paths {

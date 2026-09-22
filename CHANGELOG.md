@@ -7,6 +7,36 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #96 — Critical Bug Fixes in ELF RPATH Dynamic Loader, Kernel Config Parser, and Container Privilege Evaluator (`scanners/*`, `cmd/*`)
+**Impact:** 🔴 Restores 100% blind ELF RPATH detection + 🔴 Eliminates runtime panic in container scan + 🎯 Fixes unset kernel config parsing
+
+- **BUG-FIX-10 — Premature File Closure in ELF RPATH Scanner (`scanners/elf_rpath.go`):** Replaced `os.Open` + `elf.NewFile` + premature `file.Close()` with `elf.Open(suid.Path)`. Previously, closing the file before `elfFile.DynString()` caused all dynamic tag reads to fail with `file already closed`, rendering `ScanELFRPathAuditor` 100% blind in production.
+- **BUG-FIX-11 — Operator Precedence Panic Guard in Container CapEff (`scanners/container.go`):** Enclosed `||` condition in parentheses within `CapEff:` evaluation. Because `&&` binds tighter than `||`, if `/proc/self/status` contained fewer than 2 fields, the second `fields[1]` operand caused an unprotected index-out-of-range panic.
+- **BUG-FIX-12 — Kernel Config Unset Option Parsing & Decoupling (`scanners/kernelconfig.go`, `scanners/kernelconfig_test.go`):** Added explicit support for `# CONFIG_... is not set` syntax used by Linux kernel build systems. Previously, line comments starting with `#` were dropped upfront, making dangerous unset configs (`CONFIG_STRICT_DEVMEM` disabled) unreachable. Decoupled `parseKernelConfig` and added unit test suite with positive triggers and negative boundary controls.
+- **OPT-FIX-13 — Tmux Session Directory Upfront Pruning (`scanners/sessions.go`):** Extracted target UID and skipped current-user tmux directories before dispatching `walkpool.Walk` routines, and filtered out non-socket/directory entries.
+- **ROBUST-FIX-14 — Goroutine Parameter Binding in Module Dispatcher (`cmd/dispatch.go`):** Passed `mod` explicitly into `go func(m ModuleDescriptor)` to eliminate outer-loop closure variable capture.
+
+**Files changed:** `scanners/elf_rpath.go`, `scanners/container.go`, `scanners/kernelconfig.go`, `scanners/kernelconfig_test.go` *(new)*, `scanners/sessions.go`, `cmd/dispatch.go`, `CHANGELOG.md`
+
+---
+
+### #95 — Deep Bug Fix Batch Across Scanners, Core Engine, and Context Management (`scanners/*`, `core/*`)
+**Impact:** 🔴 Elimination of critical false negatives + 🟠 Container resilience hardening + ⚡ Memory/FD leak prevention
+
+- **BUG-FIX-01 — Operator Precedence & $ORIGIN/.. Traversal Handling (`scanners/elf_rpath.go`):** Explicitly parenthesized compound boolean evaluation in ELF RPATH/RUNPATH relative directory checks and elevated `$ORIGIN/../` path traversal library hijacking from HIGH to CRITICAL severity.
+- **BUG-FIX-02 — File Descriptor Leak Fix in Systemd Service Analysis (`scanners/cronjobs.go`):** Replaced loop-deferred `file.Close()` inside `walkpool.Walk` timer/service loop with immediate per-file closure, preventing file descriptor exhaustion on systems with hundreds of service units.
+- **BUG-FIX-03 — Container Resilience & UserContext Migration (`scanners/writeable.go`, `scanners/processes.go`, `scanners/path_hijack.go`):** Replaced 6 direct `user.Current()` syscalls with the `GetUserContext()` singleton and `userCtx.CanWrite()`, preventing complete scanner crashes and zero-finding false negatives in scratch/minimal Docker containers and chroots without `/etc/passwd`.
+- **BUG-FIX-04 — sync.Pool Header Allocation Optimization (`scanners/secrets.go`):** Changed `headerPool` in secret analysis to store `*[]byte` pointers instead of `[]byte` values, eliminating slice header interface boxing heap allocations on every `Put`.
+- **BUG-FIX-05 — Dead Code Pruning (`core/graph.go`):** Removed unused `AddEdge` method in `core/graph.go` that was superseded by `AddEdgeWeight`.
+- **BUG-FIX-06 — Unnecessary Nil Check Pruning (`core/intelligence.go`):** Removed redundant `if bestPath != nil` check wrapping `for range` in attack graph generation.
+- **BUG-FIX-07 — ExecStartPre/ExecStartPost Path Trimming Fix (`scanners/cronjobs.go`):** Fixed sequential `TrimPrefix` bug where `ExecStart=` partially consumed `ExecStartPre=`/`ExecStartPost=` prefix to `Pre=...`, silently causing writable service script detections to be missed.
+- **BUG-FIX-08 — Style Cleanup in At Jobs (`scanners/at_jobs.go`):** Replaced unnecessary parameterless `fmt.Sprintf` with string literal.
+- **BUG-FIX-09 — Unconditional Prefix Stripping (`scanners/env_file.go`):** Replaced `if strings.HasPrefix` with direct `strings.TrimPrefix` for environment file path parsing.
+
+**Files changed:** `scanners/elf_rpath.go`, `scanners/cronjobs.go`, `scanners/writeable.go`, `scanners/processes.go`, `scanners/path_hijack.go`, `scanners/secrets.go`, `core/graph.go`, `core/intelligence.go`, `scanners/at_jobs.go`, `scanners/env_file.go`, `CHANGELOG.md`
+
+---
+
 ### #94 — Comprehensive Test Suites & Parser Decoupling for Capabilities and SUID Scanners (`scanners/*`)
 **Impact:** 🛡️ 100% Quality Gate compliance + 📉 Comprehensive negative boundary test coverage
 

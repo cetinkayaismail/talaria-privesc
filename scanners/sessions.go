@@ -34,19 +34,23 @@ func ScanSessionHijack() ([]SessionHijackResult, error) {
 	// Check /tmp/tmux-* directories (tmux sockets)
 	tmuxDirs, _ := filepath.Glob("/tmp/tmux-*")
 	for _, dir := range tmuxDirs {
+		// Extract target user from dir name: /tmp/tmux-1000
+		parts := strings.Split(dir, "-")
+		if len(parts) < 2 {
+			continue
+		}
+		targetUID := parts[len(parts)-1]
+
+		// Skip current user's own tmux sessions upfront
+		if targetUID == strconv.Itoa(uid) {
+			continue
+		}
+
 		for entry := range walkpool.Walk(context.Background(), dir, poolWorkers(), nil) {
 			path := entry.Path
 			d := entry.Entry
 
-			// Extract target user from dir name: /tmp/tmux-1000/default
-			parts := strings.Split(dir, "-")
-			if len(parts) < 2 {
-				continue
-			}
-			targetUID := parts[len(parts)-1]
-
-			// Skip current user's own tmux sessions
-			if targetUID == strconv.Itoa(uid) {
+			if d.IsDir() {
 				continue
 			}
 

@@ -34,25 +34,42 @@ var dangerousKernelConfigs = map[string]struct {
 
 // ScanKernelConfig reads kernel configuration and checks for dangerous settings
 func ScanKernelConfig() ([]KernelConfigResult, error) {
-	var results []KernelConfigResult
-
 	configData, err := readKernelConfig()
 	if err != nil {
-		return results, err
+		return nil, err
 	}
+	return parseKernelConfig(configData), nil
+}
 
+// parseKernelConfig parses raw kernel config text and returns dangerous settings findings.
+func parseKernelConfig(configData string) []KernelConfigResult {
+	var results []KernelConfigResult
 	scanner := bufio.NewScanner(strings.NewReader(configData))
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
+		if line == "" {
 			continue
 		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
+
+		var key, value string
+		if strings.HasPrefix(line, "#") {
+			// In Linux kernel config files, disabled options are written as:
+			// "# CONFIG_STRICT_DEVMEM is not set"
+			trimmed := strings.TrimSpace(strings.TrimPrefix(line, "#"))
+			if strings.HasSuffix(trimmed, " is not set") {
+				key = strings.TrimSpace(strings.TrimSuffix(trimmed, " is not set"))
+				value = "is not set"
+			} else {
+				continue
+			}
+		} else {
+			parts := strings.SplitN(line, "=", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key = parts[0]
+			value = parts[1]
 		}
-		key := parts[0]
-		value := parts[1]
 
 		if cfg, ok := dangerousKernelConfigs[key]; ok {
 			isDangerous := false
@@ -87,8 +104,7 @@ func ScanKernelConfig() ([]KernelConfigResult, error) {
 			}
 		}
 	}
-
-	return results, nil
+	return results
 }
 
 // readKernelConfig tries to read kernel config from various sources

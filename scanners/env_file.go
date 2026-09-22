@@ -154,9 +154,7 @@ func extractEnvironmentFiles(servicePath string) []string {
 		}
 
 		// Strip dash-prefix: "-/path" → "/path"
-		if strings.HasPrefix(val, "-") {
-			val = val[1:]
-		}
+		val = strings.TrimPrefix(val, "-")
 
 		// Skip paths with unresolvable systemd specifiers (e.g. %i, %n, %u).
 		// Attempting to resolve them without the full instance context would

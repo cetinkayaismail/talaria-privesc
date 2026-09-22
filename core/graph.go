@@ -39,10 +39,6 @@ func (g *Graph) AddNode(id string, nodeType string) *Node {
 	return n
 }
 
-func (g *Graph) AddEdge(fromID, toID, desc string) {
-	g.AddEdgeWeight(fromID, toID, desc, 1)
-}
-
 // AddEdgeWeight adds a weighted edge to the graph (#8).
 // Automatically creates missing nodes with a generic type.
 func (g *Graph) AddEdgeWeight(fromID, toID, desc string, weight int) {

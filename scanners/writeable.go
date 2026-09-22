@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/user"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 
@@ -31,17 +29,8 @@ func ScanWriteable(root string) ([]WriteableResult, error) {
 	var results []WriteableResult
 
 	// 1. Setup User Context (Once)
-	currentUser, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-	uid, _ := strconv.Atoi(currentUser.Uid)
-	gidStrings, _ := currentUser.GroupIds()
-	userGids := make(map[int]bool)
-	for _, g := range gidStrings {
-		id, _ := strconv.Atoi(g)
-		userGids[id] = true
-	}
+	userCtx := GetUserContext()
+	uid := userCtx.UID
 
 	// 2. Define Dangerous Targets
 	dangerousBinaries := []string{"bash", "python", "perl", "vim", "find", "cp", "mv"}
@@ -65,16 +54,7 @@ func ScanWriteable(root string) ([]WriteableResult, error) {
 		}
 
 		// 3. Check Write Permission
-		mode := stat.Mode
-		canWrite := false
-
-		if uid == int(stat.Uid) && (mode&syscall.S_IWUSR != 0) {
-			canWrite = true
-		} else if userGids[int(stat.Gid)] && (mode&syscall.S_IWGRP != 0) {
-			canWrite = true
-		} else if mode&syscall.S_IWOTH != 0 {
-			canWrite = true
-		}
+		canWrite := userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode)
 
 		if canWrite {
 			// C1: Skip current-user-owned files in temp directories (noise reduction).
@@ -236,17 +216,8 @@ func ScanSystemdGenerators() ([]WriteableResult, error) {
 		"/run/systemd/user-generators",
 	}
 
-	currentUser, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-	uid, _ := strconv.Atoi(currentUser.Uid)
-	gidStrings, _ := currentUser.GroupIds()
-	userGids := make(map[int]bool)
-	for _, g := range gidStrings {
-		id, _ := strconv.Atoi(g)
-		userGids[id] = true
-	}
+	userCtx := GetUserContext()
+	uid := userCtx.UID
 
 	for _, path := range generatorPaths {
 		info, err := os.Stat(path)
@@ -264,16 +235,7 @@ func ScanSystemdGenerators() ([]WriteableResult, error) {
 		}
 
 		// Check Write Permission
-		mode := stat.Mode
-		canWrite := false
-
-		if uid == int(stat.Uid) && (mode&syscall.S_IWUSR != 0) {
-			canWrite = true
-		} else if userGids[int(stat.Gid)] && (mode&syscall.S_IWGRP != 0) {
-			canWrite = true
-		} else if mode&syscall.S_IWOTH != 0 {
-			canWrite = true
-		}
+		canWrite := userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode)
 
 		if canWrite {
 			results = append(results, WriteableResult{
@@ -296,18 +258,8 @@ func ScanSystemdGenerators() ([]WriteableResult, error) {
 func ScanWritableServices() ([]WriteableResult, error) {
 	var results []WriteableResult
 
-	currentUser, err := user.Current()
-	if err != nil {
-		return results, err
-	}
-	uid, _ := strconv.Atoi(currentUser.Uid)
-
-	gidStrings, _ := currentUser.GroupIds()
-	userGids := make(map[int]bool)
-	for _, g := range gidStrings {
-		id, _ := strconv.Atoi(g)
-		userGids[id] = true
-	}
+	userCtx := GetUserContext()
+	uid := userCtx.UID
 
 	checkDir := func(root string) {
 		for entry := range walkpool.Walk(context.Background(), root, poolWorkers(), nil) {
@@ -330,14 +282,7 @@ func ScanWritableServices() ([]WriteableResult, error) {
 			if !ok {
 				continue
 			}
-			canWrite := false
-			if uid == int(stat.Uid) && (stat.Mode&syscall.S_IWUSR != 0) {
-				canWrite = true
-			} else if userGids[int(stat.Gid)] && (stat.Mode&syscall.S_IWGRP != 0) {
-				canWrite = true
-			} else if stat.Mode&syscall.S_IWOTH != 0 {
-				canWrite = true
-			}
+			canWrite := userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode)
 			if canWrite {
 				results = append(results, WriteableResult{
 					Path:            path,
@@ -393,17 +338,8 @@ func ScanMotdProfiledHijack() ([]WriteableResult, error) {
 		},
 	}
 
-	currentUser, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-	uid, _ := strconv.Atoi(currentUser.Uid)
-	gidStrings, _ := currentUser.GroupIds()
-	userGids := make(map[int]bool)
-	for _, g := range gidStrings {
-		id, _ := strconv.Atoi(g)
-		userGids[id] = true
-	}
+	userCtx := GetUserContext()
+	uid := userCtx.UID
 
 	checkTarget := func(path string, isDir bool, target struct {
 		path       string
@@ -422,16 +358,7 @@ func ScanMotdProfiledHijack() ([]WriteableResult, error) {
 			return
 		}
 
-		mode := stat.Mode
-		canWrite := false
-
-		if uid == int(stat.Uid) && (mode&syscall.S_IWUSR != 0) {
-			canWrite = true
-		} else if userGids[int(stat.Gid)] && (mode&syscall.S_IWGRP != 0) {
-			canWrite = true
-		} else if mode&syscall.S_IWOTH != 0 {
-			canWrite = true
-		}
+		canWrite := userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode)
 
 		if canWrite {
 			typeName := target.fileType
@@ -474,15 +401,7 @@ func ScanMotdProfiledHijack() ([]WriteableResult, error) {
 	// Also check /etc/profile itself
 	if info, err := os.Stat("/etc/profile"); err == nil {
 		if stat, ok := info.Sys().(*syscall.Stat_t); ok {
-			mode := stat.Mode
-			canWrite := false
-			if uid == int(stat.Uid) && (mode&syscall.S_IWUSR != 0) {
-				canWrite = true
-			} else if userGids[int(stat.Gid)] && (mode&syscall.S_IWGRP != 0) {
-				canWrite = true
-			} else if mode&syscall.S_IWOTH != 0 {
-				canWrite = true
-			}
+			canWrite := userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode)
 
 			if canWrite {
 				results = append(results, WriteableResult{

@@ -2,8 +2,6 @@ package scanners
 
 import (
 	"os"
-	"os/user"
-	"strconv"
 	"strings"
 	"syscall"
 )
@@ -30,18 +28,7 @@ func ScanPATH() ([]PATHHijackResult, error) {
 		return results, nil
 	}
 
-	currUser, err := user.Current()
-	if err != nil {
-		return results, err
-	}
-	uid, _ := strconv.Atoi(currUser.Uid)
-
-	gidStrings, _ := currUser.GroupIds()
-	userGids := make(map[int]bool)
-	for _, g := range gidStrings {
-		id, _ := strconv.Atoi(g)
-		userGids[id] = true
-	}
+	userCtx := GetUserContext()
 
 	directories := strings.Split(pathEnv, ":")
 	seenSecurePath := false
@@ -76,15 +63,8 @@ func ScanPATH() ([]PATHHijackResult, error) {
 				continue
 			}
 
-			mode := stat.Mode
 			// Check if writeable
-			if uid == int(stat.Uid) && (mode&syscall.S_IWUSR != 0) {
-				isWriteable = true
-			} else if userGids[int(stat.Gid)] && (mode&syscall.S_IWGRP != 0) {
-				isWriteable = true
-			} else if mode&syscall.S_IWOTH != 0 {
-				isWriteable = true
-			}
+			isWriteable = userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode)
 
 			if isWriteable {
 				if !seenSecurePath {
