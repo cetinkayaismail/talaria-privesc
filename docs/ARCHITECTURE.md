@@ -27,7 +27,7 @@ graph TD
         WalkPool --> FastStat["O_RDONLY / os.Lstat / sysfs"]
     end
     
-    subgraph "Audit Subsystem Suite (40 Modules)"
+    subgraph "Audit Subsystem Suite (51 Modules)"
         Orchestrator --> Mod1["Privileged Binaries<br/>(SUID, SGID, Capabilities, ELF RPATH)"]
         Orchestrator --> Mod2["Access Controls<br/>(Sudo, Polkit, PAM, Groups)"]
         Orchestrator --> Mod3["Execution Triggers<br/>(Cron, Systemd Overrides, Udev)"]
@@ -85,7 +85,7 @@ sequenceDiagram
     Admin->>Main: Execute talaria [flags]
     Main->>Ctx: InitUserContext() (cache UID, GID, Groups)
     Ctx-->>Main: Ready
-    Main->>Scanners: Spawn 40 Concurrent Goroutines (Bounded Semaphore)
+    Main->>Scanners: Spawn 51 Concurrent Goroutines (Bounded Semaphore)
     loop Parallel Non-Blocking Inspection
         Scanners->>Scanners: Read procfs, sysfs, O_RDONLY config files
         Scanners-->>Model: Populate Findings Slice (Sync Lockless Model)
@@ -117,9 +117,9 @@ To guarantee zero operational risk within core banking perimeters, the architect
 | **S - Spoofing** | Adversary crafts deceptive `/proc` entries or symlink loops to mislead auditor. | Evaluates filesystem entries using raw inode inspection (`os.Lstat` rather than `os.Stat`), skips circular directory symlinks, and validates UID/GID boundaries directly via kernel syscalls. |
 | **T - Tampering** | Malicious alteration of scanner binaries or in-memory finding tampering. | Deterministic bit-for-bit static compilation (`-trimpath -ldflags="-s -w -buildid="`), zero CGO reliance, read-only memory segment layout, and optional AES-256-GCM cryptographic report signing and payload encapsulation. |
 | **R - Repudiation** | Auditor cannot prove system state or provenance during compliance review. | Every finding records absolute canonical filesystem path, numeric UID/GID ownership, Unix mode bits, precise timestamp, and Draft 2020-12 compliant JSON telemetry with cryptographic hash fingerprints. |
-| **I - Information Disclosure** | Discovered database credentials or private keys exposed in cleartext logs. | Dual-mode credential handling: in Professional / Institutional mode (`-p` / `--professional`), all discovered secrets, tokens, and keys are automatically masked in memory (`scanners.AuditCfg.MaskSecrets = true`). Encrypted reports use authenticated AES-256-GCM. |
+| **I - Information Disclosure** | Discovered database credentials or private keys exposed in cleartext logs. | Dual-mode credential handling: in default Audit / Institutional mode (`--audit` / `-p` / `--professional`), all discovered secrets, tokens, and keys are automatically masked in memory (`scanners.AuditCfg.MaskSecrets = true`). Encrypted reports use authenticated AES-256-GCM. |
 | **D - Denial of Service** | Deep directory traversal or descriptor exhaustion freezing banking host. | Dynamic I/O concurrency throttling (`ioLimit` bounded to `RLIMIT_NOFILE / 4`), worker pool channels (`internal/walkpool`), explicit blacklist of pseudo-filesystems (`/proc`, `/sys`, `/dev`, `/run`), and non-blocking TCP socket state queries via `/proc/net/tcp` without network handshakes. |
-| **E - Elevation of Privilege** | Scanner execution abused by unprivileged process to gain elevated access. | Strict unprivileged design: Talaria never requires SUID, never executes external shell sub-processes (zero `exec.Command("bash")`), invokes zero kernel modules, and enforces read-only operations across all 40 modules. |
+| **E - Elevation of Privilege** | Scanner execution abused by unprivileged process to gain elevated access. | Strict unprivileged design: Talaria never requires SUID, never executes external shell sub-processes (zero `exec.Command("bash")`), invokes zero kernel modules, and enforces read-only operations across all 51 modules. |
 
 ---
 
@@ -131,7 +131,7 @@ $$S_t = (F_t, M_t, P_t, D_t)$$
 **Theorem:** For any execution interval $[t_0, t_1]$ where Talaria executes under arbitrary user privileges, $S_{t_1} = S_{t_0}$ (excluding the host OS execution timestamp metadata of the Talaria process itself).
 
 ### 4.2 Architectural Proof by Construction
-1. **File Descriptor Open Flags:** Across all 40 modules, all operating system file interactions invoke `os.Open()` or `os.ReadFile()`, which map to the `sys_openat` kernel syscall with flags:
+1. **File Descriptor Open Flags:** Across all 51 modules, all operating system file interactions invoke `os.Open()` or `os.ReadFile()`, which map to the `sys_openat` kernel syscall with flags:
    $$\text{flags} \subseteq \{\text{O\_RDONLY}, \text{O\_CLOEXEC}\}$$
    No callsite across the entire codebase references `O_WRONLY`, `O_RDWR`, `O_CREAT`, `O_TRUNC`, or `O_APPEND`.
 2. **Elimination of Temporary Files:** Talaria allocates zero temporary files (`/tmp`, `/var/tmp`, `/dev/shm`). All data structures—including GTFOBins catalog tables (embedded at compile time via `//go:embed`), graph nodes, finding buffers, and reports—reside strictly in unshared process virtual memory (heap and stack).
@@ -169,7 +169,7 @@ Circular dependencies and cross-module couplings are strictly rejected by the Go
 [internal/walkpool] (Filesystem Worker Pool)
    ▲
    │
-[scanners] (40 Independent Subsystem Audit Modules)
+[scanners] (51 Independent Subsystem Audit Modules)
    ▲
    │
 [core] (Attack Graph, Intelligence Engine, Crypto & Telemetry)

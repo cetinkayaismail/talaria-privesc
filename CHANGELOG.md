@@ -7,6 +7,17 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #99 — Comprehensive Documentation Alignment: 51-Module Catalog, Default Audit Mode & CI/CD Telemetry Specifications (`USAGE.md`, `README.md`, `docs/*`)
+**Impact:** 🧠 100% documentation accuracy across all 51 security audit modules and default operational configurations
+
+- **DOC-MODULES-01 — Complete 51 Audit Module Catalog (`USAGE.md`):** Updated the module reference catalog in `USAGE.md` from 40 to all 51 active modules, adding missing entries for `sudoers_dropin`, `shell_rc`, `at_jobs`, `fstab`, `snap_audit`, `git_hooks`, `xinetd`, `initscripts`, `logrotate`, `python_hijack`, and `history`.
+- **DOC-MODES-02 — Default Operational Profile Clarifications (`USAGE.md`, `README.md`, `docs/ARCHITECTURE.md`):** Explicitly documented that Enterprise Audit Mode (`--audit=true`) is active by default across all single-command invocations (`./talaria --scan all`), providing credential masking, CIS/NIST compliance mapping, and remediation commands out-of-the-box. Documented `--ctf` as the opt-in offensive escalation mode with automatic `--deep-elf` integration.
+- **DOC-ARCHITECTURE-03 — Architecture & Threat Model Parity (`docs/ARCHITECTURE.md`, `docs/README.md`, `docs/RULES_CATALOG.md`):** Synchronized module counts from 40/45+ to 51 across Mermaid architecture diagrams, bounded goroutine concurrency specifications, STRIDE threat models, and mathematical zero-write proofs.
+
+**Files changed:** `USAGE.md`, `README.md`, `docs/ARCHITECTURE.md`, `docs/README.md`, `docs/RULES_CATALOG.md`, `CHANGELOG.md`
+
+---
+
 ### #98 — Set Audit Mode as Default CLI Operational Mode (`cmd/*`, `USAGE.md`, `README.md`)
 **Impact:** 🛡️ Safe-by-default enterprise posture + institutional credential masking enabled out-of-the-box
 

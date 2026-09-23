@@ -3,7 +3,7 @@
 **Document ID:** CAT-TALARIA-2026-V2  
 **Classification:** Tier-1 Enterprise / Institutional Banking Security Standard  
 **Compliance Standard:** CIS Linux Benchmark v2.0.0, NIST SP 800-53 Rev. 5, DISA STIG, MITRE ATT&CK  
-**Coverage:** 40 Security Domains, 8 Subsystems, 100% Deterministic Remediation Engine  
+**Coverage:** 51 Security Domains, 8 Subsystems, 100% Deterministic Remediation Engine  
 
 ---
 

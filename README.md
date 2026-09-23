@@ -53,8 +53,8 @@ Talaria solves this:
 curl -sSL https://github.com/cetinkayaismail/talaria-privesc/releases/latest/download/talaria_linux_amd64 -o talaria
 chmod +x talaria
 
-# Run complete audit with institutional credential masking
-./talaria --scan all -p
+# Run complete audit with institutional credential masking (default mode)
+./talaria --scan all
 ```
 
 ### Option 2: Compile from Source (Pure Go)
@@ -109,7 +109,7 @@ Talaria automatically correlates independent primitives (e.g., cron jobs executi
 
 ---
 
-## 🎯 45+ Security Audit Modules
+## 🎯 51 Security Audit Modules
 
 Talaria continuously audits the target host across comprehensive privilege escalation surfaces:
 
@@ -176,7 +176,7 @@ Explore our detailed specifications and guides:
 | :--- | :--- |
 | **[Contributing & Standards](CONTRIBUTING.md)** | Codebase standards (0 deps, max 80 lines), step-by-step scanner tutorial, and PR checklist. |
 | **[Architecture & Threat Model](docs/ARCHITECTURE.md)** | Component topology, STRIDE threat model, zero-write proof, attack graph DAG engine. |
-| **[Scanner Reference Catalog](docs/SCANNERS.md)** | Complete reference of all 45+ security scanners, vulnerability criteria, and risk levels. |
+| **[Scanner Reference Catalog](docs/SCANNERS.md)** | Complete reference of all 51 security scanners, vulnerability criteria, and risk levels. |
 | **[Security Rules & Remediation](docs/RULES_CATALOG.md)** | Mapping of all modules to CIS Benchmarks, NIST SP 800-53, DISA STIG, and MITRE ATT&CK. |
 | **[SIEM & Telemetry Integration](docs/INTEGRATION_GUIDE.md)** | JSON Schema, Splunk blueprints, Elastic Logstash pipelines, Datadog, and SARIF export. |
 | **[Operations & SRE Runbook](docs/OPERATIONS_RUNBOOK.md)** | Deployment topologies (Kubernetes CronJobs, systemd timers, air-gapped workloads). |

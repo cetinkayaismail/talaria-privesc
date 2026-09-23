@@ -10,7 +10,7 @@ Welcome to the **Talaria** technical documentation library. This directory conta
 docs/
 ├── README.md                           # Documentation directory index (this file)
 ├── ARCHITECTURE.md                     # Enterprise architecture & formal STRIDE threat model
-├── SCANNERS.md                         # Detailed catalog of all 45+ security audit scanners
+├── SCANNERS.md                         # Detailed catalog of all 51 security audit scanners
 ├── RULES_CATALOG.md                    # CIS Benchmarks, NIST SP 800-53, DISA STIG, & MITRE ATT&CK mapping
 ├── INTEGRATION_GUIDE.md                # SIEM integration (Splunk, Elastic, Datadog), JSON Schema, SARIF
 ├── OPERATIONS_RUNBOOK.md               # SRE deployment guide (Kubernetes CronJobs, systemd, air-gap)
