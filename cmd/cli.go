@@ -8,21 +8,22 @@ import (
 
 // Config encapsulates all parsed command-line flags and runtime settings.
 type Config struct {
-	ScanModules    string
-	ExcludeModules string
-	RootPath       string
-	OutputFile     string
-	OutputFormat   string
-	SudoPassword   string
-	IOLimit        int
-	EncryptKey     string
-	CTFMode        bool
-	AuditMode      bool
-	ShowUI         bool
-	NoColor        bool
-	QuietMode      bool   // Phase 4: Suppress interactive banners for CI/CD pipelines
-	FailOn         string // Phase 4: CI/CD policy threshold: CRITICAL, HIGH, MEDIUM
-	DeepELF        bool   // Deep ELF string analysis & PATH hijack auditing on custom SUID binaries
+	ScanModules       string
+	ExcludeModules    string
+	RootPath          string
+	OutputFile        string
+	OutputFormat      string
+	SudoPassword      string
+	IOLimit           int
+	EncryptKey        string
+	CTFMode           bool
+	AuditMode         bool
+	ShowUI            bool
+	NoColor           bool
+	QuietMode         bool   // Phase 4: Suppress interactive banners for CI/CD pipelines
+	FailOn            string // Phase 4: CI/CD policy threshold: CRITICAL, HIGH, MEDIUM
+	DeepELF           bool   // Deep ELF string analysis & PATH hijack auditing on custom SUID binaries
+	IncludeKernelCVEs bool   // Include active kernel CVE alerts in audit/compliance mode
 }
 
 // ParseFlags registers and parses all command-line arguments.
@@ -57,6 +58,7 @@ func ParseFlags(args []string) (*Config, error) {
 	fs.StringVar(&cfg.FailOn, "fail-on", "", "CI/CD Policy Gate: Exit code 1 if findings meet or exceed severity (CRITICAL, HIGH, MEDIUM).")
 	fs.BoolVar(&cfg.QuietMode, "quiet", false, "Pipeline mode: suppress ASCII banners and animated headers.")
 	fs.BoolVar(&cfg.QuietMode, "q", false, "Alias for --quiet (shorthand).")
+	fs.BoolVar(&cfg.IncludeKernelCVEs, "include-kernel-cves", false, "Include kernel CVE vulnerability alerts in audit/compliance mode (advisory heuristic).")
 
 	fs.Usage = func() {
 		PrintUsage()
@@ -147,6 +149,7 @@ func PrintUsage() {
 	fmt.Println("\nCI/CD & AUTOMATION (PHASE 4):")
 	fmt.Println("  --fail-on=SEVERITY   Exit code 1 if findings meet or exceed threshold (CRITICAL, HIGH, MEDIUM)")
 	fmt.Println("  --quiet, -q          Pipeline mode: suppress banner and decorative output for CI/CD logs")
+	fmt.Println("  --include-kernel-cves Include kernel CVE vulnerability alerts in audit/compliance mode (advisory heuristic)")
 	fmt.Println("\nPRESENTATION FLAGS:")
 	fmt.Println("  --ui                 Enable visual summary dashboard card")
 	fmt.Println("  --no-color           Disable ANSI colors (also respects NO_COLOR environment variable)")

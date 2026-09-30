@@ -356,7 +356,21 @@ func GenerateTextReport(report *models.ScanReport) string {
 		for _, r := range report.Vulnerabilities {
 			if r.IsDangerous {
 				for _, v := range r.Vulnerabilities {
-					lines = append(lines, fmt.Sprintf("[CRITICAL] %s — %s (%s %s)", v.CVE, v.Name, r.Software, r.Version))
+					if r.Software == "Kernel" {
+						sev := "INFO"
+						if !report.AuditMode && v.IsCritical {
+							sev = "CRITICAL"
+						}
+						note := ""
+						if v.ContainerNote != "" {
+							note = fmt.Sprintf(" [%s]", v.ContainerNote)
+						} else if report.AuditMode {
+							note = " [Advisory: Unverified heuristic]"
+						}
+						lines = append(lines, fmt.Sprintf("[%s] %s — %s (%s %s)%s", sev, v.CVE, v.Name, r.Software, r.Version, note))
+					} else {
+						lines = append(lines, fmt.Sprintf("[CRITICAL] %s — %s (%s %s)", v.CVE, v.Name, r.Software, r.Version))
+					}
 				}
 			}
 		}
@@ -852,10 +866,17 @@ func countFindingsBySeverity(report *models.ScanReport) (int, int, int) {
 	for _, v := range report.Vulnerabilities {
 		if v.IsDangerous {
 			for _, sub := range v.Vulnerabilities {
-				if sub.PatchStatus == "likely_patched" {
-					medium++
+				if v.Software == "Kernel" {
+					if !report.AuditMode && sub.IsCritical && sub.PatchStatus != "likely_patched" {
+						critical++
+					}
+					// In Audit/CI mode, kernel version matches are strictly advisory and do NOT increment critical or high gates
 				} else {
-					critical++
+					if sub.PatchStatus == "likely_patched" {
+						medium++
+					} else {
+						critical++
+					}
 				}
 			}
 		}

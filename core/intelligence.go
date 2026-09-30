@@ -1256,13 +1256,17 @@ func (c *VulnerabilitiesKernelChain) Evaluate(report *models.ScanReport) []Chain
 		for _, vul := range vInfo.Vulnerabilities {
 			if vul.IsCritical {
 				riskLevel := "100% CONFIRMED"
-				if vul.PatchStatus == "likely_patched" {
+				if vul.PatchStatus == "likely_patched" || (vInfo.Software == "Kernel" && report.AuditMode) {
 					riskLevel = "POTENTIAL"
+				}
+				desc := fmt.Sprintf("%s. Kernel/Software version: %s.", vul.Description, vInfo.Version)
+				if vul.ContainerNote != "" {
+					desc += fmt.Sprintf(" [%s]", vul.ContainerNote)
 				}
 				results = append(results, ChainResult{
 					Name:        fmt.Sprintf("High-Reliability LPE Vulnerability: %s (%s)", vul.CVE, vul.Name),
 					RiskLevel:   riskLevel,
-					Description: fmt.Sprintf("%s. Kernel/Software version: %s.", vul.Description, vInfo.Version),
+					Description: desc,
 					Exploit:     vul.ExploitHint,
 				})
 			}

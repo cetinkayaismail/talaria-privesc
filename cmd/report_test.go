@@ -78,3 +78,57 @@ func TestSaveReportSARIF(t *testing.T) {
 		t.Errorf("Expected version '2.1.0', got %v", parsed["version"])
 	}
 }
+
+func TestEvaluatePolicyKernelVulnerabilityInAuditMode(t *testing.T) {
+	// In audit mode (default CI/CD), kernel findings are advisory and must NOT trigger CRITICAL gate
+	reportAudit := &models.ScanReport{
+		AuditMode: true,
+		Vulnerabilities: []scanners.VersionInfo{
+			{
+				Software:    "Kernel",
+				Version:     "5.10.0-generic",
+				IsDangerous: true,
+				Vulnerabilities: []scanners.KernelVulnerability{
+					{
+						CVE:         "CVE-2022-0847",
+						Name:        "Dirty Pipe",
+						IsCritical:  true,
+						Confidence:  "advisory_unverified",
+						Severity:    "INFO",
+						ExploitHint: "./dirtypipe",
+					},
+				},
+			},
+		},
+	}
+
+	failedAudit, msgAudit := EvaluatePolicy(reportAudit, "CRITICAL")
+	if failedAudit {
+		t.Fatalf("Expected policy PASS in audit mode for kernel finding, got failure: %s", msgAudit)
+	}
+
+	// In offensive / CTF mode (AuditMode: false), critical kernel finding counts towards policy gate
+	reportCTF := &models.ScanReport{
+		AuditMode: false,
+		Vulnerabilities: []scanners.VersionInfo{
+			{
+				Software:    "Kernel",
+				Version:     "5.10.0-generic",
+				IsDangerous: true,
+				Vulnerabilities: []scanners.KernelVulnerability{
+					{
+						CVE:         "CVE-2022-0847",
+						Name:        "Dirty Pipe",
+						IsCritical:  true,
+						ExploitHint: "./dirtypipe",
+					},
+				},
+			},
+		},
+	}
+
+	failedCTF, _ := EvaluatePolicy(reportCTF, "CRITICAL")
+	if !failedCTF {
+		t.Fatalf("Expected policy FAIL in CTF mode for critical kernel finding")
+	}
+}

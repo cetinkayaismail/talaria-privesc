@@ -152,3 +152,21 @@ func TestParseFlagsDeepELFResolution(t *testing.T) {
 		t.Errorf("expected DeepELF to be false when explicitly passed as false")
 	}
 }
+
+func TestParseFlagsIncludeKernelCVEs(t *testing.T) {
+	cfgDefault, err := ParseFlags([]string{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfgDefault.IncludeKernelCVEs {
+		t.Errorf("expected IncludeKernelCVEs to be false by default")
+	}
+
+	cfgExplicit, err := ParseFlags([]string{"--include-kernel-cves"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfgExplicit.IncludeKernelCVEs {
+		t.Errorf("expected IncludeKernelCVEs to be true when explicitly passed")
+	}
+}

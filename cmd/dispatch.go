@@ -383,21 +383,38 @@ func BuildModuleRegistry() []ModuleDescriptor {
 					if len(results) > 0 {
 						core.PrintSectionHeader("System Vulnerabilities")
 						for _, r := range results {
-							if r.IsDangerous {
-								for _, v := range r.Vulnerabilities {
+							if !r.IsDangerous {
+								continue
+							}
+							for _, v := range r.Vulnerabilities {
+								details := map[string]string{
+									"CVE":      v.CVE,
+									"Name":     v.Name,
+									"Version":  r.Version,
+									"Software": r.Software,
+								}
+								if v.PatchStatus == "likely_patched" {
+									details["Status"] = "Likely patched (backport detected)"
+								}
+
+								if r.Software == "Kernel" {
+									if ctx.Config.CTFMode {
+										severity := "CRITICAL"
+										if v.PatchStatus == "likely_patched" {
+											severity = "POTENTIAL"
+										}
+										core.PrintFinding(severity, "Kernel LPE (CTF Vector)", details, v.ExploitHint)
+									} else if v.ContainerNote != "" {
+										core.PrintFinding("INFO", "Kernel Advisory (Containerized)", details, v.ContainerNote)
+									} else if ctx.Config.IncludeKernelCVEs {
+										core.PrintFinding("MEDIUM", "Kernel CVE Advisory (Unverified)", details, "Distro livepatch/reboot status unverified. "+v.ExploitHint)
+									} else {
+										core.PrintFinding("INFO", "Kernel Advisory (Unverified)", details, "Heuristic match; unverified without reboot. Pass --include-kernel-cves to promote.")
+									}
+								} else {
 									severity := "CRITICAL"
 									if v.PatchStatus == "likely_patched" {
 										severity = "POTENTIAL"
-									}
-
-									details := map[string]string{
-										"CVE":      v.CVE,
-										"Name":     v.Name,
-										"Version":  r.Version,
-										"Software": r.Software,
-									}
-									if v.PatchStatus == "likely_patched" {
-										details["Status"] = "Likely patched (backport detected)"
 									}
 									core.PrintFinding(severity, "Vulnerability Found", details, v.ExploitHint)
 								}

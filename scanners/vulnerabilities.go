@@ -39,6 +39,9 @@ type KernelVulnerability struct {
 	IsCritical    bool              `json:"is_critical"`
 	ExploitHint   string            `json:"exploit_hint,omitempty"`
 	PatchStatus   string            `json:"patch_status,omitempty"`
+	Confidence    string            `json:"confidence,omitempty"`
+	Severity      string            `json:"severity,omitempty"`
+	ContainerNote string            `json:"container_note,omitempty"`
 	Remediation   string            `json:"remediation,omitempty"`
 	ComplianceTag string            `json:"compliance_tag,omitempty"`
 }
@@ -482,6 +485,9 @@ func isKernelConfigEnabled(option string) bool {
 // It also performs distro-specific patch checks and runtime prerequisite validation.
 func checkKernelRange(parsed [3]int, rawVer string, distro DistroInfo) []KernelVulnerability {
 	var found []KernelVulnerability
+	inContainer := IsContainerEnvironment()
+	inCI := IsCIEnvironment()
+
 	for _, v := range kernelVulnerabilities {
 		// Skip PwnKit — it's not a kernel vulnerability
 		if v.CVE == "CVE-2021-4034" {
@@ -504,6 +510,14 @@ func checkKernelRange(parsed [3]int, rawVer string, distro DistroInfo) []KernelV
 					continue // Skip patched CVEs to reduce noise
 				}
 			}
+
+			// Smart context metadata: demote severity and tag confidence
+			v.Confidence = "advisory_unverified"
+			v.Severity = "INFO"
+			if inContainer || inCI {
+				v.ContainerNote = "Running inside container/CI — kernel is managed by underlying host infrastructure, skipping pipeline block"
+			}
+
 			found = append(found, v)
 		}
 	}

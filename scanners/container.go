@@ -17,60 +17,58 @@ type ContainerEscapeResult struct {
 	ComplianceTag string `json:"compliance_tag,omitempty"`
 }
 
-// ScanContainer detects if we are running inside a container (Docker/LXC/podman)
-// and then checks for common escape vectors.
-func ScanContainer() ([]ContainerEscapeResult, error) {
-	var results []ContainerEscapeResult
+// IsCIEnvironment returns true if running within common CI/CD environments (GitHub Actions, GitLab CI, generic CI).
+func IsCIEnvironment() bool {
+	return os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" || os.Getenv("GITLAB_CI") != ""
+}
 
-	// 1. Detect container environment
-	isContainer := false
-	containerType := "unknown"
-
-	// Check for .dockerenv (Docker always creates this)
+// DetectContainerEnvironment detects if execution is occurring inside a container (Docker/LXC/k8s/overlay)
+// and returns whether a container was detected along with its type description.
+func DetectContainerEnvironment() (bool, string) {
 	if _, err := os.Stat("/.dockerenv"); err == nil {
-		isContainer = true
-		containerType = "Docker"
+		return true, "Docker"
 	}
 
-	// Check cgroup for docker/lxc/kubepods signatures (cgroup v1)
-	if !isContainer {
-		if data, err := os.ReadFile("/proc/1/cgroup"); err == nil {
-			content := string(data)
-			if strings.Contains(content, "docker") {
-				isContainer = true
-				containerType = "Docker (cgroup)"
-			} else if strings.Contains(content, "lxc") {
-				isContainer = true
-				containerType = "LXC (cgroup)"
-			} else if strings.Contains(content, "kubepods") {
-				isContainer = true
-				containerType = "Kubernetes Pod"
-			} else if strings.TrimSpace(content) == "0::/" || strings.Contains(content, "0::/") {
-				// cgroup v2: unified hierarchy shows "0::/" — cross-check with mountinfo (B5)
-				if mountData, err := os.ReadFile("/proc/1/mountinfo"); err == nil {
-					mc := string(mountData)
-					if strings.Contains(mc, "overlay") || strings.Contains(mc, "docker") || strings.Contains(mc, "containerd") {
-						isContainer = true
-						containerType = "Container (cgroupv2 + overlay)"
-					}
+	if data, err := os.ReadFile("/proc/1/cgroup"); err == nil {
+		content := string(data)
+		if strings.Contains(content, "docker") {
+			return true, "Docker (cgroup)"
+		} else if strings.Contains(content, "lxc") {
+			return true, "LXC (cgroup)"
+		} else if strings.Contains(content, "kubepods") {
+			return true, "Kubernetes Pod"
+		} else if strings.TrimSpace(content) == "0::/" || strings.Contains(content, "0::/") {
+			if mountData, err := os.ReadFile("/proc/1/mountinfo"); err == nil {
+				mc := string(mountData)
+				if strings.Contains(mc, "overlay") || strings.Contains(mc, "docker") || strings.Contains(mc, "containerd") {
+					return true, "Container (cgroupv2 + overlay)"
 				}
 			}
 		}
 	}
 
-	// Check /proc/1/sched: PID 1 name reveals container vs host
-	if !isContainer {
-		if data, err := os.ReadFile("/proc/1/sched"); err == nil {
-			firstLine := strings.SplitN(string(data), "\n", 2)[0]
-			// On a host, this is usually "systemd (1, #threads: 1)"
-			// In a container it might be "sh (1...)" or "bash (1...)"
-			if !strings.Contains(firstLine, "systemd") && !strings.Contains(firstLine, "init") {
-				isContainer = true
-				containerType = "Container (sched heuristic: PID1=" + strings.Fields(firstLine)[0] + ")"
-			}
+	if data, err := os.ReadFile("/proc/1/sched"); err == nil {
+		firstLine := strings.SplitN(string(data), "\n", 2)[0]
+		if !strings.Contains(firstLine, "systemd") && !strings.Contains(firstLine, "init") {
+			return true, "Container (sched heuristic: PID1=" + strings.Fields(firstLine)[0] + ")"
 		}
 	}
 
+	return false, "unknown"
+}
+
+// IsContainerEnvironment returns true if the host is running within a container or namespace jail.
+func IsContainerEnvironment() bool {
+	isContainer, _ := DetectContainerEnvironment()
+	return isContainer
+}
+
+// ScanContainer detects if we are running inside a container (Docker/LXC/podman)
+// and then checks for common escape vectors.
+func ScanContainer() ([]ContainerEscapeResult, error) {
+	var results []ContainerEscapeResult
+
+	isContainer, containerType := DetectContainerEnvironment()
 	if !isContainer {
 		// Not in a container — no escape vectors to report
 		return results, nil

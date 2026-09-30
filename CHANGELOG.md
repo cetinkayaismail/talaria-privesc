@@ -7,6 +7,18 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #100 — Smart Context Kernel Vulnerability Demotion & Container Muting (`scanners/*`, `cmd/*`, `core/*`)
+**Impact:** 📉 False positive reduction — eliminates CI/CD build breakages from un-rebooted host kernels and container runners
+
+- **VULN-SMART-01 — Demote Kernel Vulnerabilities to Advisory in Audit Mode (`scanners/vulnerabilities.go`, `cmd/report.go`):** Reclassified kernel CVE findings from `CRITICAL` to `INFO` by default with `confidence: advisory_unverified` tagging in default enterprise audit mode. Updated `countFindingsBySeverity` so un-rebooted kernel heuristic alerts never violate CI/CD policy gates (`--fail-on=CRITICAL` / `--fail-on=HIGH`).
+- **CONTAINER-MUTE-02 — Container & CI Environment Context Awareness (`scanners/container.go`, `scanners/vulnerabilities.go`):** Added `IsContainerEnvironment()` and `IsCIEnvironment()` detection. When executed inside Docker/LXC/k8s pods or CI runners, kernel vulnerability findings are explicitly annotated (`Running inside container/CI — kernel is managed by underlying host infrastructure, skipping pipeline block`).
+- **CLI-KERNEL-03 — Explicit Opt-In Flag and CTF Retention (`cmd/cli.go`, `cmd/dispatch.go`):** Retained prominent `CRITICAL` kernel exploit displays in offensive `--ctf` mode. Introduced `--include-kernel-cves` CLI flag to allow operators to actively promote kernel CVE advisories during compliance audits.
+- **GRAPH-WEIGHT-04 — Graph and Intelligence Engine Calibration (`core/intelligence.go`, `core/graph.go`):** In `VulnerabilitiesKernelChain`, lowered unverified kernel CVE chain risk from `100% CONFIRMED` to `POTENTIAL` in audit mode. Reduced graph edge weight in `core/graph.go` from 10 to 3 so deterministic human misconfigurations (cron jobs, sudoers, SUID, capabilities) remain prioritized in the Dijkstra shortest attack path.
+
+**Files changed:** `scanners/container.go`, `scanners/vulnerabilities.go`, `scanners/vulnerabilities_test.go` *(new)*, `cmd/cli.go`, `cmd/cli_test.go`, `cmd/dispatch.go`, `cmd/report.go`, `cmd/report_test.go`, `core/intelligence.go`, `core/graph.go`, `CHANGELOG.md`
+
+---
+
 ### #99 — Comprehensive Documentation Alignment: 51-Module Catalog, Default Audit Mode & CI/CD Telemetry Specifications (`USAGE.md`, `README.md`, `docs/*`)
 **Impact:** 🧠 100% documentation accuracy across all 51 security audit modules and default operational configurations
 
