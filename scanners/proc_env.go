@@ -102,7 +102,9 @@ func ScanProcEnvAuditor(procResults []ProcessResult) ([]ProcEnvResult, error) {
 
 			if isSensitive {
 				valPreview := val
-				if len(valPreview) > 16 {
+				if AuditCfg.MaskSecrets {
+					valPreview = maskSecretValue(val)
+				} else if len(valPreview) > 16 {
 					valPreview = valPreview[:16] + "..."
 				}
 

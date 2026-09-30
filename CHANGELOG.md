@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #101 — Credential Masking Parity in Process Environment Scanner (`scanners/proc_env.go`)
+**Impact:** 🛡️ Safe-by-default enterprise posture — redacts cleartext credentials in `/proc/[pid]/environ` during audit mode
+
+- **ENV-MASK-01 — Mask Sensitive Environment Values (`scanners/proc_env.go`):** Aligned `ScanProcEnvAuditor` with `scanners.AuditCfg.MaskSecrets`. In default Enterprise Audit mode, discovered environment credentials (passwords, tokens, API keys) are masked with `****` or prefix redaction, while full samples remain available in offensive `--ctf` mode.
+
+**Files changed:** `scanners/proc_env.go`, `CHANGELOG.md`
+
+---
+
 ### #100 — Smart Context Kernel Vulnerability Demotion & Container Muting (`scanners/*`, `cmd/*`, `core/*`)
 **Impact:** 📉 False positive reduction — eliminates CI/CD build breakages from un-rebooted host kernels and container runners
 
