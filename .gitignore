@@ -78,6 +78,8 @@ lab_reports/
 Dockerfile.lab
 docker-compose.lab.yml
 lab/
+run_demo.sh
+DEMO_GUIDE.md
 docs/LAB_GUIDE.md
 codebase_analysis.md
 improvement_analysis.md
