@@ -620,17 +620,14 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 			if sub.PatchStatus == "likely_patched" {
 				continue
 			}
-			weight := 9
-			edgeWeight := 10
 			if v.Software == "Kernel" && report.AuditMode {
-				// Deprioritize unverified kernel heuristic so deterministic misconfigurations take precedence
-				weight = 2
-				edgeWeight = 3
+				// In Audit mode, unverified kernel version heuristics do not construct speculative root edges
+				continue
 			}
 			cveID := fmt.Sprintf("cve:%s", sub.Name)
 			g.AddNode(cveID, "Vulnerability")
-			g.AddEdgeWeight(currentUser, cveID, fmt.Sprintf("High-reliability exploit: %s (%s)", sub.Name, sub.Description), weight)
-			g.AddEdgeWeight(cveID, "goal:root", fmt.Sprintf("Exploiting %s yields immediate root privileges", sub.Name), edgeWeight)
+			g.AddEdgeWeight(currentUser, cveID, fmt.Sprintf("High-reliability exploit: %s (%s)", sub.Name, sub.Description), 9)
+			g.AddEdgeWeight(cveID, "goal:root", fmt.Sprintf("Exploiting %s yields immediate root privileges", sub.Name), 10)
 		}
 	}
 

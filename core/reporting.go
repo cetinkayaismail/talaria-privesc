@@ -254,6 +254,10 @@ func PrintSummary(report *models.ScanReport, duration string) {
 	}
 	for _, s := range report.Vulnerabilities {
 		if s.IsDangerous {
+			if s.Software == "Kernel" && (Config.Mode == ModeAudit || report.AuditMode) {
+				// In Audit mode, unverified kernel version heuristics are advisory and do not increment critical
+				continue
+			}
 			critical++
 		}
 	}
