@@ -95,6 +95,22 @@ func BuildModuleRegistry() []ModuleDescriptor {
 						}, f.Remediation)
 					}
 				}
+
+				mailFiles, mailContent := scanners.ScanMailSpools()
+				if len(mailFiles) > 0 {
+					ctx.Mu.Lock()
+					ctx.Report.Secrets = append(ctx.Report.Secrets, mailFiles...)
+					ctx.Report.SecretContent = append(ctx.Report.SecretContent, mailContent...)
+					ctx.Mu.Unlock()
+
+					core.PrintSectionHeader("User Mailbox Spools (/var/mail)")
+					for _, f := range mailFiles {
+						core.PrintFinding(f.RiskLevel, "Mailbox Spool Found", map[string]string{
+							"Type": f.Type,
+							"Path": f.Path,
+						}, f.Remediation)
+					}
+				}
 				return nil
 			},
 		},
@@ -363,6 +379,12 @@ func BuildModuleRegistry() []ModuleDescriptor {
 								"Address": fmt.Sprintf("%s:%d", r.LocalAddr, r.LocalPort),
 								"Process": r.ProcessName,
 								"PID":     fmt.Sprintf("%d", r.PID),
+							}, "")
+						} else if r.RiskLevel == "INFO" && (r.State == "CONFIGURED" || r.State == "HOST-ALIAS" || r.State == "SEARCH-DOMAIN") {
+							core.PrintFinding(r.RiskLevel, "Network Context ("+strings.ToUpper(r.Protocol)+")", map[string]string{
+								"Target": r.LocalAddr,
+								"Detail": r.ProcessName,
+								"Reason": r.Reason,
 							}, "")
 						}
 					}
@@ -765,7 +787,20 @@ func BuildModuleRegistry() []ModuleDescriptor {
 								if r.Path != "" {
 									details["Path"] = r.Path
 								}
-								core.PrintFinding(severity, "Package Misconfiguration", details, hint)
+								title := "Package Misconfiguration"
+								if r.RiskLevel == "INFO" {
+									title = "Available Build Utility"
+								}
+								core.PrintFinding(severity, title, details, hint)
+							} else if r.RiskLevel == "INFO" {
+								details := map[string]string{
+									"Tool":   r.Name,
+									"Reason": r.Reason,
+								}
+								if r.Path != "" {
+									details["Path"] = r.Path
+								}
+								core.PrintFinding("INFO", "Installed Build Tool / Compiler", details, "")
 							}
 						}
 					}

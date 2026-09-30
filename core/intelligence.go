@@ -1253,10 +1253,14 @@ func (c *VulnerabilitiesKernelChain) Evaluate(report *models.ScanReport) []Chain
 		if !vInfo.IsDangerous {
 			continue
 		}
+		// In Audit mode, speculative kernel version heuristics are advisory and do not form actionable attack chains
+		if vInfo.Software == "Kernel" && report.AuditMode {
+			continue
+		}
 		for _, vul := range vInfo.Vulnerabilities {
 			if vul.IsCritical {
 				riskLevel := "100% CONFIRMED"
-				if vul.PatchStatus == "likely_patched" || (vInfo.Software == "Kernel" && report.AuditMode) {
+				if vul.PatchStatus == "likely_patched" {
 					riskLevel = "POTENTIAL"
 				}
 				desc := fmt.Sprintf("%s. Kernel/Software version: %s.", vul.Description, vInfo.Version)

@@ -46,7 +46,96 @@ func ScanNetworkConnections() ([]NetworkConnectionResult, error) {
 	results = append(results, scanNetFile("/proc/net/udp", "udp", inodeMap)...)
 	results = append(results, scanNetFile("/proc/net/udp6", "udp6", inodeMap)...)
 
+	// Scan Network Context & Pivoting Primitives (Proxies, /etc/hosts, resolv.conf)
+	results = append(results, ScanNetworkEnvironment()...)
+
 	return results, nil
+}
+
+// ScanNetworkEnvironment audits environment variables and system configuration files for
+// outbound proxies, internal host aliases (/etc/hosts), and internal search domains (/etc/resolv.conf).
+func ScanNetworkEnvironment() []NetworkConnectionResult {
+	var results []NetworkConnectionResult
+
+	// 1. Outbound HTTP/HTTPS/SOCKS Proxies
+	proxyVars := []string{
+		"http_proxy", "https_proxy", "ftp_proxy", "all_proxy", "no_proxy",
+		"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
+	}
+	seenProxies := make(map[string]bool)
+	for _, v := range proxyVars {
+		val := os.Getenv(v)
+		if val != "" && !seenProxies[val] {
+			seenProxies[val] = true
+			results = append(results, NetworkConnectionResult{
+				Protocol:      "proxy",
+				LocalAddr:     v,
+				ProcessName:   val,
+				State:         "CONFIGURED",
+				RiskLevel:     "INFO",
+				IsDangerous:   false,
+				Reason:        fmt.Sprintf("Outbound proxy environment variable '%s=%s' is active.", v, val),
+				ComplianceTag: "CIS-Linux-3.4 / MITRE-T1090",
+			})
+		}
+	}
+
+	// 2. Internal Host Aliases in /etc/hosts (MITRE T1016)
+	if hostsFile, err := os.Open("/etc/hosts"); err == nil {
+		defer hostsFile.Close()
+		scanner := bufio.NewScanner(hostsFile)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			fields := strings.Fields(line)
+			if len(fields) >= 2 {
+				ip := fields[0]
+				// Skip standard loopback mappings
+				if ip == "127.0.0.1" || ip == "::1" || strings.HasPrefix(ip, "fe00::") || strings.HasPrefix(ip, "ff00::") {
+					continue
+				}
+				hostnames := strings.Join(fields[1:], ", ")
+				results = append(results, NetworkConnectionResult{
+					Protocol:      "hosts",
+					LocalAddr:     ip,
+					ProcessName:   hostnames,
+					State:         "HOST-ALIAS",
+					RiskLevel:     "INFO",
+					IsDangerous:   false,
+					Reason:        fmt.Sprintf("Internal infrastructure host mapping: %s -> %s", ip, hostnames),
+					ComplianceTag: "CIS-Linux-3.4 / MITRE-T1016",
+				})
+			}
+		}
+	}
+
+	// 3. Internal DNS Search Domains in /etc/resolv.conf
+	if resolvFile, err := os.Open("/etc/resolv.conf"); err == nil {
+		defer resolvFile.Close()
+		scanner := bufio.NewScanner(resolvFile)
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if strings.HasPrefix(line, "search ") || strings.HasPrefix(line, "domain ") {
+				domains := strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(line, "search"), "domain"))
+				if domains != "" && domains != "local" {
+					results = append(results, NetworkConnectionResult{
+						Protocol:      "dns-search",
+						LocalAddr:     "resolv.conf",
+						ProcessName:   domains,
+						State:         "SEARCH-DOMAIN",
+						RiskLevel:     "INFO",
+						IsDangerous:   false,
+						Reason:        fmt.Sprintf("Internal corporate DNS search domain configured: %s", domains),
+						ComplianceTag: "CIS-Linux-3.4 / MITRE-T1016",
+					})
+				}
+			}
+		}
+	}
+
+	return results
 }
 
 func scanNetFile(filePath string, protocol string, inodeMap map[string]socketProcessInfo) []NetworkConnectionResult {

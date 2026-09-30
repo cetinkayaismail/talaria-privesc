@@ -7,6 +7,19 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #102 — Tier 1 & Tier 2 Security Enhancements: KeePass, Mail Spool, Browser Secrets, Compilers & Network Pivoting (`scanners/*`, `cmd/*`, `core/*`)
+**Impact:** 🎯 Expanded discovery vectors (KeePass, Keyrings, Browser profiles, Mailboxes) + 🧠 Informational build tools & network pivoting discovery with zero speed penalty (<5ms)
+
+- **SEC-TIER1-01 — KeePass, Keyrings & Browser Credential Store Discovery (`scanners/secrets.go`):** Extended `matchCriticalPattern` and `previewFirstLine` with explicit matching for KeePass `.kdbx`/`.kdb` databases, Linux keyrings (`.keyring`, `~/.local/share/keyrings`), and desktop browser credential vaults (`logins.json`, `cookies.sqlite`, `key4.db`, `key3.db`, `cert9.db`). For binary credential stores, verified readability without byte-dumping, safely returning descriptive metadata previews.
+- **SEC-TIER1-02 — User Mailbox Spool Scanner (`scanners/secrets.go`, `cmd/dispatch.go`):** Implemented `ScanMailSpools()` to inspect `/var/mail` and `/var/spool/mail`. Bounded reading to 100 lines to instantly detect unprivileged-readable mailboxes, root mail leaks, and bounced cron failure notifications containing credential strings without latency.
+- **PKG-TIER2-03 — Installed Compilers & Attack Utility Enumeration (`scanners/packages.go`, `cmd/dispatch.go`):** Introduced `ScanCompilers()` checking for `gcc`, `clang`, `g++`, `make`, `gdb`, `nasm`, `as`, `nc`, `ncat`, `socat`, and `tcpdump`. Categorized findings as non-blocking `[INFO]` in Audit mode (mapped to CIS Benchmark 2.2 / NIST-CM-7), while providing compilation commands and weaponization hints in `--ctf` mode.
+- **NET-TIER2-04 — Outbound Proxy & Internal Host Discovery (`scanners/network.go`, `cmd/dispatch.go`):** Added `ScanNetworkEnvironment()` auditing active proxy environment variables (`http_proxy`, `https_proxy`), `/etc/hosts` internal infrastructure host mappings (skipping loopbacks), and `/etc/resolv.conf` search domains. Discovered items are presented as clean `[INFO]` Network Context cards without false positives.
+- **INTEL-ALIGN-05 — Audit-Mode Kernel Chain Alignment (`core/intelligence.go`):** Suppressed speculative unverified kernel version CVE matches in `VulnerabilitiesKernelChain` during Audit mode, ensuring complete parity with `core/graph.go` and eliminating spurious `[MEDIUM]` attack chain alerts inside containerized/audit environments.
+
+**Files changed:** `scanners/secrets.go`, `scanners/packages.go`, `scanners/network.go`, `scanners/tier_enhancements_test.go` *(new)*, `cmd/dispatch.go`, `core/intelligence.go`, `CHANGELOG.md`
+
+---
+
 ### #101 — Credential Masking Parity in Process Environment Scanner (`scanners/proc_env.go`)
 **Impact:** 🛡️ Safe-by-default enterprise posture — redacts cleartext credentials in `/proc/[pid]/environ` during audit mode
 

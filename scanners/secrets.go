@@ -45,6 +45,7 @@ func matchCriticalPattern(fileName, path string) (bool, string) {
 	pathSuffixes := []string{
 		"/.aws/credentials", "/.aws/config", "/.kube/config",
 		"/.docker/config.json", "/.gnupg/secring.gpg",
+		"/.local/share/keyrings",
 	}
 	for _, ps := range pathSuffixes {
 		if strings.HasSuffix(path, ps) {
@@ -56,7 +57,8 @@ func matchCriticalPattern(fileName, path string) (bool, string) {
 	exactFiles := []string{
 		"shadow", "gshadow", "sudoers", "shadow-", "gshadow-",
 		".netrc", ".bash_history", ".zsh_history", ".sh_history", ".history",
-		"logins.json", "cookies", "login data", "web data",
+		"logins.json", "cookies", "login data", "web data", "cookies.sqlite",
+		"key4.db", "key3.db", "cert9.db",
 	}
 	for _, ef := range exactFiles {
 		if fileName == ef {
@@ -71,7 +73,7 @@ func matchCriticalPattern(fileName, path string) (bool, string) {
 	}
 	keyPatterns := []string{
 		"id_rsa", "id_dsa", "id_ed25519", "id_ecdsa",
-		".p12", ".pfx", ".kdbx",
+		".p12", ".pfx", ".kdbx", ".kdb", ".keyring",
 	}
 	for _, kp := range keyPatterns {
 		if strings.Contains(fileName, kp) {
@@ -633,8 +635,19 @@ func extractKeyName(line string) string {
 	return "Secret"
 }
 
-// previewFirstLine returns the first non-empty line of a file (for private key confirmation).
+// previewFirstLine returns the first non-empty line of a file (for private key confirmation)
+// or a descriptive preview string for binary credential stores (e.g. .kdbx, keyrings).
 func previewFirstLine(path string) string {
+	lower := strings.ToLower(path)
+	if strings.HasSuffix(lower, ".kdbx") || strings.HasSuffix(lower, ".kdb") || strings.HasSuffix(lower, ".keyring") || strings.HasSuffix(lower, ".sqlite") || strings.HasSuffix(lower, ".db") {
+		f, err := os.Open(path)
+		if err != nil {
+			return ""
+		}
+		f.Close()
+		return "[Binary Credential Store / Keyring Database]"
+	}
+
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return ""
@@ -646,6 +659,81 @@ func previewFirstLine(path string) string {
 		}
 	}
 	return ""
+}
+
+// ScanMailSpools audits /var/mail and /var/spool/mail for readable user mailboxes.
+func ScanMailSpools() ([]SensitiveFileResult, []SensitiveContentResult) {
+	var fileResults []SensitiveFileResult
+	var contentResults []SensitiveContentResult
+
+	mailDirs := []string{"/var/mail", "/var/spool/mail"}
+	for _, mDir := range mailDirs {
+		entries, err := os.ReadDir(mDir)
+		if err != nil {
+			continue
+		}
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			path := filepath.Join(mDir, e.Name())
+			info, err := e.Info()
+			if err != nil || info.Size() == 0 {
+				continue
+			}
+
+			// Verify readability
+			f, err := os.Open(path)
+			if err != nil {
+				continue
+			}
+
+			// Bounded read (max 100 lines) looking for credentials or delivery failures
+			scanner := bufio.NewScanner(f)
+			foundSnippet := ""
+			hasPass := false
+			lineCount := 0
+			for scanner.Scan() && lineCount < 100 {
+				lineCount++
+				line := scanner.Text()
+				lowerLine := strings.ToLower(line)
+				if strings.Contains(lowerLine, "password") ||
+					strings.Contains(lowerLine, "passwd") ||
+					strings.Contains(lowerLine, "secret") ||
+					strings.Contains(lowerLine, "token") {
+					hasPass = true
+					foundSnippet = strings.TrimSpace(line)
+					break
+				}
+			}
+			f.Close()
+
+			riskLevel := "MEDIUM"
+			if hasPass || strings.EqualFold(e.Name(), "root") {
+				riskLevel = "CRITICAL"
+			}
+
+			fileResults = append(fileResults, SensitiveFileResult{
+				Path:          path,
+				Type:          "Mailbox Spool (" + e.Name() + ")",
+				RiskLevel:     riskLevel,
+				Remediation:   "chmod 0600 " + path,
+				ComplianceTag: "CIS-Linux-5.4.3 / NIST-IA-5(1)",
+			})
+
+			snippet := "Readable mailbox spool owned by " + e.Name()
+			if foundSnippet != "" {
+				snippet = "Preview: " + foundSnippet
+			}
+			contentResults = append(contentResults, SensitiveContentResult{
+				Path:          path,
+				Snippet:       snippet,
+				Remediation:   "chmod 0600 " + path,
+				ComplianceTag: "CIS-Linux-5.4.3 / NIST-IA-5(1)",
+			})
+		}
+	}
+	return fileResults, contentResults
 }
 
 // isFalsePositive filters out obvious placeholder values and common documentation words
