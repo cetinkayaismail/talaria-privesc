@@ -31,6 +31,8 @@ jobs:
             echo "Building static release for linux/${arch}..."
             CGO_ENABLED=0 GOOS=linux GOARCH=${arch} go build -trimpath -ldflags="${LDFLAGS}" -o dist/talaria_linux_${arch} main.go
           done
+          echo "Building static release for linux/armv7..."
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 go build -trimpath -ldflags="${LDFLAGS}" -o dist/talaria_linux_armv7 main.go
           
           cd dist
           sha256sum talaria_linux_* > checksums.sha256
@@ -43,6 +45,7 @@ jobs:
           files: |
             dist/talaria_linux_amd64
             dist/talaria_linux_arm64
+            dist/talaria_linux_armv7
             dist/talaria_linux_386
             dist/checksums.sha256
           generate_release_notes: true

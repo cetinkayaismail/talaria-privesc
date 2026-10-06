@@ -24,11 +24,12 @@ build-static: ## Compile statically linked binary (CGO_ENABLED=0)
 	CGO_ENABLED=0 $(GO) build -trimpath -ldflags="$(LDFLAGS) -extldflags '-static'" -o $(BINARY_NAME) main.go
 	@echo "=> Static build complete: ./$(BINARY_NAME)"
 
-cross-compile: ## Cross-compile static binaries for Linux amd64, arm64, and 386
+cross-compile: ## Cross-compile static binaries for Linux amd64, arm64, armv7, and 386
 	@echo "=> Cross-compiling release binaries into $(DIST_DIR)/..."
 	@mkdir -p $(DIST_DIR)
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GO) build -trimpath -ldflags="$(LDFLAGS) -extldflags '-static'" -o $(DIST_DIR)/$(BINARY_NAME)_linux_amd64 main.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 $(GO) build -trimpath -ldflags="$(LDFLAGS) -extldflags '-static'" -o $(DIST_DIR)/$(BINARY_NAME)_linux_arm64 main.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=7 $(GO) build -trimpath -ldflags="$(LDFLAGS) -extldflags '-static'" -o $(DIST_DIR)/$(BINARY_NAME)_linux_armv7 main.go
 	CGO_ENABLED=0 GOOS=linux GOARCH=386   $(GO) build -trimpath -ldflags="$(LDFLAGS) -extldflags '-static'" -o $(DIST_DIR)/$(BINARY_NAME)_linux_386 main.go
 	@cd $(DIST_DIR) && sha256sum $(BINARY_NAME)_* > checksums.sha256
 	@echo "=> Cross-compile complete. Checksums generated in $(DIST_DIR)/checksums.sha256"

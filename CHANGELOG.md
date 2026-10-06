@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #104 — Multi-Architecture Static Release Engine & Linux ARMv7 Support (`Makefile`, `.github/workflows/release.yml`)
+**Impact:** 🛡️ 100% static, zero-dependency release binaries for all Linux distros (amd64, arm64, armv7, 386)
+
+- **REL-MULTIARCH-01 — Embedded Multi-Architecture Static Cross-Compilation (`Makefile`, `.github/workflows/release.yml`):** Expanded cross-compilation pipeline with ARMv7 32-bit embedded support (`linux_armv7`) alongside `linux_amd64`, `linux_arm64`, and `linux_386`. Binaries are compiled with `CGO_ENABLED=0 -ldflags="-s -w -extldflags '-static'"`, embedding the full GTFOBins catalog and standard library runtime into single, self-contained standalone executables requiring zero external dynamic libraries or runtime dependencies across any Linux distribution (Alpine, Debian, Ubuntu, CentOS, RHEL, Arch).
+
+**Files changed:** `Makefile`, `.github/workflows/release.yml`, `CHANGELOG.md`
+
+---
+
 ### #103 — Atomic Section Output Buffering, Process False Positive Elimination & Compound Cron Job PrivEsc Engine (`core/*`, `scanners/*`, `cmd/*`)
 **Impact:** 📉 100% elimination of process false positives + ⚡ Thread-safe atomic section terminal output + 🎯 Compound cron & web-root script escalation discovery
 
