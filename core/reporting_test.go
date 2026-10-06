@@ -140,3 +140,31 @@ func TestPrintSummaryComprehensiveCounters(t *testing.T) {
 		t.Errorf("Expected 2 Critical, 1 High, 1 Medium in summary, got:\n%s", out)
 	}
 }
+
+func TestSectionBufferingAndFlush(t *testing.T) {
+	Config.Mode = ModeCTF
+	Config.NoColor = true
+	Config.EnableUI = false
+
+	// Empty section should output nothing
+	emptyOut := captureOutput(func() {
+		sec := NewSection("Empty Test Section")
+		sec.Flush()
+	})
+	if emptyOut != "" {
+		t.Errorf("Expected empty section to output nothing, got:\n%s", emptyOut)
+	}
+
+	// Populated section should output header and finding
+	populatedOut := captureOutput(func() {
+		sec := NewSection("Test Active Section")
+		sec.AddFinding("CRITICAL", "Test Vulnerability", map[string]string{
+			"Target": "/var/test",
+		}, "")
+		sec.Flush()
+	})
+	if !strings.Contains(populatedOut, "=== TEST ACTIVE SECTION ===") || !strings.Contains(populatedOut, "Test Vulnerability") {
+		t.Errorf("Expected header and finding in section output, got:\n%s", populatedOut)
+	}
+}
+

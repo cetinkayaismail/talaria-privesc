@@ -804,61 +804,116 @@ func (c *WritableServiceChain) Evaluate(report *models.ScanReport) []ChainResult
 }
 
 // resolveCommandPath intelligently checks if a command string eventually targets a specific file path.
-// It handles: direct absolute paths, basename (PATH-resolved), cd+command patterns with filepath.Abs.
+// It handles: direct absolute paths, basename (PATH-resolved), cd+command patterns with filepath.Abs,
+// and command wrappers (sudo, env, nice, nohup).
 func resolveCommandPath(command string, targetPath string) bool {
+	if command == "" || targetPath == "" {
+		return false
+	}
+	cleanTarget := filepath.Clean(targetPath)
+
 	// Direct match (absolute path used in command)
-	if strings.Contains(command, targetPath) {
+	if strings.Contains(command, cleanTarget) || strings.Contains(command, targetPath) {
 		return true
 	}
 
 	// Basename match for PATH-resolved execution
-	targetParts := strings.Split(targetPath, "/")
-	if len(targetParts) > 0 {
-		baseName := targetParts[len(targetParts)-1]
+	baseName := filepath.Base(cleanTarget)
+	if baseName != "." && baseName != "/" {
 		if command == baseName || strings.HasPrefix(command, baseName+" ") || strings.Contains(command, " "+baseName) || strings.Contains(command, "./"+baseName) {
 			return true
 		}
 	}
 
-	// Handle 'cd <dir> && <cmd>' or 'cd <dir>; <cmd>'
-	parts := strings.Split(command, "&&")
-	if len(parts) == 1 {
-		parts = strings.Split(command, ";")
+	// Normalize chained commands: split by &&, ||, ;, |
+	cmdNormalized := command
+	for _, op := range []string{"&&", "||", ";", "|"} {
+		cmdNormalized = strings.ReplaceAll(cmdNormalized, op, "\n")
 	}
+	parts := strings.Split(cmdNormalized, "\n")
 
-	// Track current directory for 'cd dir && cmd' patterns
 	var currentDir string
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
 
 		if strings.HasPrefix(part, "cd ") {
 			currentDir = strings.TrimSpace(strings.TrimPrefix(part, "cd "))
-		} else if currentDir != "" {
-			cmdFields := strings.Fields(part)
-			if len(cmdFields) > 0 {
-				var execName string
-				// interpreters like "bash script.sh" → script is the 2nd arg
-				interpreters := map[string]bool{"bash": true, "sh": true, "python": true, "python3": true, "perl": true, "ruby": true}
-				if interpreters[cmdFields[0]] && len(cmdFields) > 1 {
-					execName = cmdFields[1]
-				} else {
-					execName = cmdFields[0]
-				}
+			currentDir = strings.Trim(currentDir, "\"'")
+			continue
+		}
 
-				if execName != "" {
-					execName = strings.TrimPrefix(execName, "./")
+		cmdFields := strings.Fields(part)
+		if len(cmdFields) == 0 {
+			continue
+		}
 
-					// Build the resolved path and normalize it via filepath.Abs
-					fullPath := currentDir + "/" + execName
-					resolvedPath, err := filepath.Abs(fullPath)
-					if err != nil {
-						resolvedPath = fullPath
+		// Skip variable assignments e.g. VAR=val
+		idx := 0
+		for idx < len(cmdFields) && strings.Contains(cmdFields[idx], "=") && !strings.HasPrefix(cmdFields[idx], "-") {
+			idx++
+		}
+
+		// Strip wrappers: sudo, env, nice, nohup
+		for idx < len(cmdFields) {
+			base := filepath.Base(cmdFields[idx])
+			if base == "sudo" {
+				idx++
+				for idx < len(cmdFields) && strings.HasPrefix(cmdFields[idx], "-") {
+					if cmdFields[idx] == "-u" || cmdFields[idx] == "-g" {
+						idx += 2
+					} else {
+						idx++
 					}
-
-					if resolvedPath == targetPath {
-						return true
-					}
 				}
+				continue
+			}
+			if base == "env" || base == "nohup" || base == "nice" {
+				idx++
+				for idx < len(cmdFields) && strings.HasPrefix(cmdFields[idx], "-") {
+					idx++
+				}
+				continue
+			}
+			break
+		}
+		if idx >= len(cmdFields) {
+			continue
+		}
+
+		execName := cmdFields[idx]
+		baseExec := filepath.Base(execName)
+		interpreters := map[string]bool{"bash": true, "sh": true, "dash": true, "zsh": true, "python": true, "python2": true, "python3": true, "perl": true, "ruby": true, "php": true, "node": true}
+		if interpreters[baseExec] && idx+1 < len(cmdFields) {
+			for a := idx + 1; a < len(cmdFields); a++ {
+				arg := cmdFields[a]
+				if !strings.HasPrefix(arg, "-") {
+					execName = arg
+					break
+				}
+			}
+		}
+
+		if execName != "" {
+			execName = strings.Trim(execName, "\"'")
+			execName = strings.TrimPrefix(execName, "./")
+
+			var resolvedPath string
+			if filepath.IsAbs(execName) {
+				resolvedPath = filepath.Clean(execName)
+			} else if currentDir != "" {
+				resolvedPath = filepath.Clean(filepath.Join(currentDir, execName))
+			} else {
+				resolvedPath = execName
+			}
+
+			if resolvedPath == cleanTarget {
+				return true
+			}
+			if absResolved, err := filepath.Abs(resolvedPath); err == nil && absResolved == cleanTarget {
+				return true
 			}
 		}
 	}

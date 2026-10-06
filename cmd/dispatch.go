@@ -126,20 +126,20 @@ func BuildModuleRegistry() []ModuleDescriptor {
 				ctx.Mu.Lock()
 				ctx.Report.SUID = results
 				ctx.Mu.Unlock()
-				if len(results) > 0 {
-					core.PrintSectionHeader("SUID Binaries")
-					for _, r := range results {
-						if r.IsDangerous {
-							core.PrintFinding("CRITICAL", "Dangerous SUID Binary", map[string]string{
-								"Path": r.Path,
-							}, r.Remediation)
-						} else {
-							core.PrintFinding("INFO", "SUID Binary", map[string]string{
-								"Path": r.Path,
-							}, r.Remediation)
-						}
+
+				sec := core.NewSection("SUID Binaries")
+				for _, r := range results {
+					if r.IsDangerous {
+						sec.AddFinding("CRITICAL", "Dangerous SUID Binary", map[string]string{
+							"Path": r.Path,
+						}, r.Remediation)
+					} else {
+						sec.AddFinding("INFO", "SUID Binary", map[string]string{
+							"Path": r.Path,
+						}, r.Remediation)
 					}
 				}
+				sec.Flush()
 				return nil
 			},
 		},
@@ -155,15 +155,15 @@ func BuildModuleRegistry() []ModuleDescriptor {
 				ctx.Mu.Lock()
 				ctx.Report.SGID = results
 				ctx.Mu.Unlock()
-				if len(results) > 0 {
-					core.PrintSectionHeader("SGID Binaries")
-					for _, r := range results {
-						core.PrintFinding("INFO", "SGID Binary", map[string]string{
-							"Path":   r.Path,
-							"Reason": r.Reason,
-						}, r.Remediation)
-					}
+
+				sec := core.NewSection("SGID Binaries")
+				for _, r := range results {
+					sec.AddFinding("INFO", "SGID Binary", map[string]string{
+						"Path":   r.Path,
+						"Reason": r.Reason,
+					}, r.Remediation)
 				}
+				sec.Flush()
 				return nil
 			},
 		},
@@ -179,16 +179,22 @@ func BuildModuleRegistry() []ModuleDescriptor {
 				ctx.Mu.Lock()
 				ctx.Report.Processes = results
 				ctx.Mu.Unlock()
-				if len(results) > 0 {
-					core.PrintSectionHeader("Running Processes & ptrace")
-					for _, r := range results {
-						core.PrintFinding("INFO", "Suspicious Process", map[string]string{
+
+				sec := core.NewSection("Suspicious Running Processes")
+				for _, r := range results {
+					if r.IsDangerous {
+						fields := map[string]string{
 							"PID":     fmt.Sprintf("%d", r.PID),
 							"Command": r.Command,
 							"User":    r.User,
-						}, "")
+						}
+						if r.Reason != "" {
+							fields["Reason"] = r.Reason
+						}
+						sec.AddFinding("HIGH", "Suspicious Process", fields, "")
 					}
 				}
+				sec.Flush()
 				return nil
 			},
 		},
@@ -198,24 +204,35 @@ func BuildModuleRegistry() []ModuleDescriptor {
 			Phase:   1,
 			NeedsIO: true,
 			Run: func(ctx *DispatchContext) error {
+				sec := core.NewSection("Cron Jobs & Timers")
+
 				results, err := scanners.ScanCronJobs()
 				if err == nil {
 					ctx.Mu.Lock()
 					ctx.Report.CronJobs = results
 					ctx.Mu.Unlock()
-					if len(results) > 0 {
-						core.PrintSectionHeader("Cron Jobs & Timers")
-						for _, r := range results {
+					for _, r := range results {
+						risk := r.RiskLevel
+						if risk == "" {
 							if r.IsDangerous {
-								core.PrintFinding("CRITICAL", "CronJob Found", map[string]string{
-									"Command": r.Command,
-									"Reason":  r.Reason,
-								}, r.Remediation)
+								risk = "CRITICAL"
 							} else if r.IsRootJob {
-								core.PrintFinding("INFO", "Root CronJob", map[string]string{
-									"Command": r.Command,
-								}, r.Remediation)
+								risk = "INFO"
 							}
+						}
+						if r.IsDangerous {
+							title := "CronJob Found"
+							if strings.Contains(strings.ToLower(r.Reason), "anomalous") || strings.Contains(strings.ToLower(r.Reason), "suspicious") {
+								title = "Suspicious Root CronJob"
+							}
+							sec.AddFinding(risk, title, map[string]string{
+								"Command": r.Command,
+								"Reason":  r.Reason,
+							}, r.Remediation)
+						} else if r.IsRootJob {
+							sec.AddFinding("INFO", "Root CronJob", map[string]string{
+								"Command": r.Command,
+							}, r.Remediation)
 						}
 					}
 				}
@@ -227,7 +244,7 @@ func BuildModuleRegistry() []ModuleDescriptor {
 					ctx.Mu.Unlock()
 					for _, r := range systemdResults {
 						if r.IsDangerous {
-							core.PrintFinding("CRITICAL", "Systemd Timer Found", map[string]string{
+							sec.AddFinding("CRITICAL", "Systemd Timer Found", map[string]string{
 								"Path":   r.Path,
 								"Reason": r.Reason,
 							}, r.Remediation)
@@ -242,7 +259,7 @@ func BuildModuleRegistry() []ModuleDescriptor {
 					ctx.Mu.Unlock()
 					for _, r := range wildcardResults {
 						if r.IsDangerous {
-							core.PrintFinding(r.RiskLevel, "Wildcard Injection Target", map[string]string{
+							sec.AddFinding(r.RiskLevel, "Wildcard Injection Target", map[string]string{
 								"Command":     r.Command,
 								"Utility":     r.VulnerableCmd,
 								"WorkingDir":  r.WorkingDir,
@@ -253,6 +270,8 @@ func BuildModuleRegistry() []ModuleDescriptor {
 						}
 					}
 				}
+
+				sec.Flush()
 				return nil
 			},
 		},
@@ -371,24 +390,24 @@ func BuildModuleRegistry() []ModuleDescriptor {
 				ctx.Mu.Lock()
 				ctx.Report.NetworkConnections = results
 				ctx.Mu.Unlock()
-				if len(results) > 0 {
-					core.PrintSectionHeader("Network Connections")
-					for _, r := range results {
-						if r.State == "LISTEN" {
-							core.PrintFinding(r.RiskLevel, "Active Listener", map[string]string{
-								"Address": fmt.Sprintf("%s:%d", r.LocalAddr, r.LocalPort),
-								"Process": r.ProcessName,
-								"PID":     fmt.Sprintf("%d", r.PID),
-							}, "")
-						} else if r.RiskLevel == "INFO" && (r.State == "CONFIGURED" || r.State == "HOST-ALIAS" || r.State == "SEARCH-DOMAIN") {
-							core.PrintFinding(r.RiskLevel, "Network Context ("+strings.ToUpper(r.Protocol)+")", map[string]string{
-								"Target": r.LocalAddr,
-								"Detail": r.ProcessName,
-								"Reason": r.Reason,
-							}, "")
-						}
+
+				sec := core.NewSection("Network Connections")
+				for _, r := range results {
+					if r.State == "LISTEN" {
+						sec.AddFinding(r.RiskLevel, "Active Listener", map[string]string{
+							"Address": fmt.Sprintf("%s:%d", r.LocalAddr, r.LocalPort),
+							"Process": r.ProcessName,
+							"PID":     fmt.Sprintf("%d", r.PID),
+						}, "")
+					} else if r.RiskLevel == "INFO" && (r.State == "CONFIGURED" || r.State == "HOST-ALIAS" || r.State == "SEARCH-DOMAIN") {
+						sec.AddFinding(r.RiskLevel, "Network Context ("+strings.ToUpper(r.Protocol)+")", map[string]string{
+							"Target": r.LocalAddr,
+							"Detail": r.ProcessName,
+							"Reason": r.Reason,
+						}, "")
 					}
 				}
+				sec.Flush()
 				return nil
 			},
 		},
@@ -710,21 +729,21 @@ func BuildModuleRegistry() []ModuleDescriptor {
 					ctx.Mu.Lock()
 					ctx.Report.Groups = results
 					ctx.Mu.Unlock()
-					if len(results) > 0 {
-						core.PrintSectionHeader("Group Memberships")
-						for _, r := range results {
-							if r.IsDangerous {
-								hint := ""
-								if !ctx.Config.AuditMode && r.ExploitHint != "" {
-									hint = r.ExploitHint
-								}
-								core.PrintFinding("CRITICAL", "Privileged Group Membership", map[string]string{
-									"Group":  r.GroupName,
-									"Reason": r.Reason,
-								}, hint)
+
+					sec := core.NewSection("Group Memberships")
+					for _, r := range results {
+						if r.IsDangerous {
+							hint := ""
+							if !ctx.Config.AuditMode && r.ExploitHint != "" {
+								hint = r.ExploitHint
 							}
+							sec.AddFinding("CRITICAL", "Privileged Group Membership", map[string]string{
+								"Group":  r.GroupName,
+								"Reason": r.Reason,
+							}, hint)
 						}
 					}
+					sec.Flush()
 				}
 				return nil
 			},
@@ -1169,22 +1188,22 @@ func BuildModuleRegistry() []ModuleDescriptor {
 					ctx.Mu.Lock()
 					ctx.Report.SubUIDResults = results
 					ctx.Mu.Unlock()
-					if len(results) > 0 {
-						core.PrintSectionHeader("Unprivileged User Namespaces & SubUID/SubGID")
-						for _, r := range results {
-							if r.IsDangerous {
-								hint := ""
-								if !ctx.Config.AuditMode {
-									hint = r.ExploitHint
-								}
-								core.PrintFinding(r.RiskLevel, "SubUID/UserNS Misconfiguration", map[string]string{
-									"Type":   r.Type,
-									"User":   r.TargetUser,
-									"Reason": r.Reason,
-								}, hint)
+
+					sec := core.NewSection("Unprivileged User Namespaces & SubUID/SubGID")
+					for _, r := range results {
+						if r.IsDangerous {
+							hint := ""
+							if !ctx.Config.AuditMode {
+								hint = r.ExploitHint
 							}
+							sec.AddFinding(r.RiskLevel, "SubUID/UserNS Misconfiguration", map[string]string{
+								"Type":   r.Type,
+								"User":   r.TargetUser,
+								"Reason": r.Reason,
+							}, hint)
 						}
 					}
+					sec.Flush()
 				}
 				return nil
 			},

@@ -1,6 +1,7 @@
 package scanners
 
 import (
+	"fmt"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -15,6 +16,7 @@ type ProcessResult struct {
 	UID         int
 	Command     string
 	IsDangerous bool
+	Reason      string
 	EnvSecrets  []string
 }
 
@@ -80,7 +82,7 @@ func ScanProcesses() ([]ProcessResult, error) {
 
 		// Identify if the process is a potential PrivEsc vector
 		userName := lookupUsername(p.UID)
-		isDangerous := checkProcessDanger(p.Cmdline, p.UID, userShells)
+		isDangerous, reason := checkProcessDanger(p.Cmdline, p.UID, userShells)
 
 		// Read environment variables for exposed secrets
 		var envSecrets []string
@@ -88,6 +90,11 @@ func ScanProcesses() ([]ProcessResult, error) {
 			envSecrets = parseEnviron(p.EnvironRaw)
 			if len(envSecrets) > 0 {
 				isDangerous = true
+				if reason == "" {
+					reason = "Exposed credentials detected in process environment variables"
+				} else {
+					reason += " | Exposed credentials in environ"
+				}
 			}
 		}
 
@@ -97,6 +104,7 @@ func ScanProcesses() ([]ProcessResult, error) {
 			UID:         p.UID,
 			Command:     p.Cmdline,
 			IsDangerous: isDangerous,
+			Reason:      reason,
 			EnvSecrets:  envSecrets,
 		})
 	}
@@ -113,52 +121,71 @@ func lookupUsername(uid int) string {
 }
 
 // checkProcessDanger applies heuristics to flag suspicious processes
-func checkProcessDanger(cmdline string, uid int, userShells map[int]string) bool {
+func checkProcessDanger(cmdline string, uid int, userShells map[int]string) (bool, string) {
 	if len(strings.Fields(cmdline)) == 0 {
-		return false
+		return false, ""
 	}
 	cmdBase := filepath.Base(strings.Fields(cmdline)[0])
 	lowerCmd := strings.ToLower(cmdline)
 
-	// CRITICAL!!!: Debug tools are always dangerous (direct exploitation indicators)
+	// CRITICAL: Debug tools are always dangerous (direct exploitation indicators)
 	for _, critical := range CriticalProcesses {
 		if strings.EqualFold(cmdBase, critical) {
-			return true
+			return true, fmt.Sprintf("Active debugger tool running: %s", cmdBase)
 		}
 	}
 
-	//  Network tools with suspicious patterns (nc -l = listening shell)
-	if strings.EqualFold(cmdBase, "nc") || strings.EqualFold(cmdBase, "ncat") {
-		// Only flag if listening (-l option) or executing shell
-		if strings.Contains(lowerCmd, " -l") || strings.Contains(lowerCmd, "-e /bin/") {
-			return true
+	// Exploitation tools / proxy tunnels
+	exploitTools := []string{"socat", "chisel", "ligolo-ng", "mimikatz"}
+	for _, tool := range exploitTools {
+		if strings.EqualFold(cmdBase, tool) {
+			return true, fmt.Sprintf("Suspicious exploitation/tunneling tool running: %s", cmdBase)
 		}
 	}
 
-	//  Sensitive keywords in cmdline (potential credential leak)
-	sensitiveKeywords := []string{"pass=", "pwd=", "secret=", "token=", "api_key"}
+	// Network tools with suspicious patterns (nc -l = listening shell)
+	if strings.EqualFold(cmdBase, "nc") || strings.EqualFold(cmdBase, "ncat") || strings.EqualFold(cmdBase, "netcat") {
+		if strings.Contains(lowerCmd, " -l") || strings.Contains(lowerCmd, "-e ") || strings.Contains(lowerCmd, "-c ") {
+			return true, fmt.Sprintf("Active netcat listener or shell execution: %s", cmdBase)
+		}
+	}
+
+	// Reverse shell / interactive pseudo-terminal indicators
+	if strings.Contains(lowerCmd, "/dev/tcp/") || strings.Contains(lowerCmd, "/dev/udp/") ||
+		strings.Contains(lowerCmd, "pty.spawn") || strings.Contains(lowerCmd, "pty.open") {
+		return true, "Command line contains reverse shell socket or pty allocation patterns"
+	}
+
+	// Remote script execution pipes: curl/wget piped to shell
+	if (strings.Contains(lowerCmd, "curl ") || strings.Contains(lowerCmd, "wget ")) &&
+		(strings.Contains(lowerCmd, "| bash") || strings.Contains(lowerCmd, "| sh") || strings.Contains(lowerCmd, "|bash") || strings.Contains(lowerCmd, "|sh")) {
+		return true, "Command downloads and pipes directly into shell execution"
+	}
+
+	// Sensitive keywords in cmdline (potential credential leak)
+	sensitiveKeywords := []string{"pass=", "pwd=", "secret=", "token=", "api_key="}
 	for _, key := range sensitiveKeywords {
 		if strings.Contains(lowerCmd, key) {
-			return true
+			return true, fmt.Sprintf("Command line exposes potential credential parameter (%s)", key)
 		}
 	}
 
-	//  High-risk shell execution by non-login system accounts (e.g., www-data, nobody running bash/sh)
+	// High-risk shell execution by non-login system accounts (e.g., www-data, nobody running bash/sh)
 	if uid != 0 {
 		if shell, ok := userShells[uid]; ok {
 			if strings.Contains(shell, "nologin") || strings.Contains(shell, "false") {
 				if strings.EqualFold(cmdBase, "bash") || strings.EqualFold(cmdBase, "sh") || strings.EqualFold(cmdBase, "dash") || strings.EqualFold(cmdBase, "zsh") {
 					// Ignore standard display manager session launchers (e.g. LightDM greeter sessions)
 					if strings.Contains(lowerCmd, "lightdm-greeter-session") || strings.Contains(lowerCmd, "gdm-session-worker") || strings.Contains(lowerCmd, "sddm-helper") {
-						return false
+						return false, ""
 					}
-					return true
+					return true, fmt.Sprintf("Non-login system service account (UID %d) running interactive shell: %s", uid, cmdBase)
 				}
 			}
 		}
 	}
 
-	return false
+	return false, ""
 }
 
 // PtraceScopeResult holds the ptrace_scope value and whether it's exploitable

@@ -21,6 +21,7 @@ type CronJobResult struct {
 	IsRootJob       bool   `json:"is_root_job"`
 	IsPrivilegedJob bool   `json:"is_privileged_job"`
 	IsDangerous     bool   `json:"is_dangerous"`
+	RiskLevel       string `json:"risk_level,omitempty"`
 	Reason          string `json:"reason,omitempty"`
 	CronFile        string `json:"cron_file,omitempty"`
 	Remediation     string `json:"remediation,omitempty"`
@@ -151,6 +152,116 @@ func parseFile(filePath string, currentUID int) []CronJobResult {
 	return results
 }
 
+type cronExtractedTarget struct {
+	path       string
+	workingDir string
+	hasSudo    bool
+}
+
+func extractCronTargets(command string) []cronExtractedTarget {
+	cmdNormalized := command
+	for _, op := range []string{"&&", "||", ";", "|"} {
+		cmdNormalized = strings.ReplaceAll(cmdNormalized, op, "\n")
+	}
+	subCmds := strings.Split(cmdNormalized, "\n")
+
+	var workingDir string
+	var targets []cronExtractedTarget
+
+	for _, sub := range subCmds {
+		sub = strings.TrimSpace(sub)
+		if sub == "" {
+			continue
+		}
+		if strings.HasPrefix(sub, "cd ") {
+			dir := strings.TrimSpace(strings.TrimPrefix(sub, "cd "))
+			dir = strings.Trim(dir, "\"'")
+			if dir != "" {
+				workingDir = dir
+			}
+			continue
+		}
+
+		tokens := strings.Fields(sub)
+		if len(tokens) == 0 {
+			continue
+		}
+
+		// Skip leading variable assignments e.g. FOO=bar
+		idx := 0
+		for idx < len(tokens) && strings.Contains(tokens[idx], "=") && !strings.HasPrefix(tokens[idx], "-") {
+			idx++
+		}
+		if idx >= len(tokens) {
+			continue
+		}
+
+		hasSudo := false
+		// Strip wrappers: sudo, env, nice, nohup
+		for idx < len(tokens) {
+			base := filepath.Base(tokens[idx])
+			if base == "sudo" {
+				hasSudo = true
+				idx++
+				for idx < len(tokens) && strings.HasPrefix(tokens[idx], "-") {
+					if tokens[idx] == "-u" || tokens[idx] == "-g" {
+						idx += 2
+					} else {
+						idx++
+					}
+				}
+				continue
+			}
+			if base == "env" || base == "nohup" || base == "nice" {
+				idx++
+				for idx < len(tokens) && strings.HasPrefix(tokens[idx], "-") {
+					idx++
+				}
+				continue
+			}
+			break
+		}
+		if idx >= len(tokens) {
+			continue
+		}
+
+		execToken := tokens[idx]
+		baseExec := filepath.Base(execToken)
+		interpreters := map[string]bool{
+			"python": true, "python2": true, "python3": true,
+			"bash": true, "sh": true, "dash": true, "zsh": true,
+			"perl": true, "ruby": true, "php": true, "node": true,
+		}
+
+		var targetPath string
+		if interpreters[baseExec] {
+			for a := idx + 1; a < len(tokens); a++ {
+				arg := tokens[a]
+				if !strings.HasPrefix(arg, "-") {
+					targetPath = arg
+					break
+				}
+			}
+		} else {
+			targetPath = execToken
+		}
+
+		if targetPath != "" {
+			targetPath = strings.Trim(targetPath, "\"'")
+			resolved := targetPath
+			if !filepath.IsAbs(targetPath) && workingDir != "" {
+				resolved = filepath.Join(workingDir, strings.TrimPrefix(targetPath, "./"))
+			}
+			targets = append(targets, cronExtractedTarget{
+				path:       resolved,
+				workingDir: workingDir,
+				hasSudo:    hasSudo,
+			})
+		}
+	}
+	return targets
+}
+
 func analyzeCronLine(line string, filePath string, currentUID int) *CronJobResult {
 	fields := strings.Fields(line)
 	if len(fields) < 6 {
@@ -168,50 +279,101 @@ func analyzeCronLine(line string, filePath string, currentUID int) *CronJobResul
 
 	isRoot := (jobOwner == "root" || jobOwner == "0")
 	isDangerous := false
+	riskLevel := "INFO"
 	reason := ""
 
-	// Check for writable command or interpreted script (Critical finding)
-	cmdParts := strings.Fields(command)
-	if len(cmdParts) > 0 {
-		execPath := cmdParts[0]
-		interpreters := map[string]bool{
-			"python": true, "python2": true, "python3": true,
-			"bash": true, "sh": true, "dash": true, "zsh": true,
-			"perl": true, "ruby": true, "php": true, "node": true,
-		}
-		targetPaths := []string{execPath}
-		baseExec := filepath.Base(execPath)
-		if interpreters[baseExec] && len(cmdParts) > 1 {
-			for _, arg := range cmdParts[1:] {
-				if !strings.HasPrefix(arg, "-") {
-					targetPaths = append(targetPaths, arg)
+	targets := extractCronTargets(command)
+	userCtx := GetUserContext()
+
+	for _, tgt := range targets {
+		target := tgt.path
+		targetBase := filepath.Base(target)
+
+		// 1. Check writability of target file
+		if info, err := os.Stat(target); err == nil {
+			stat, ok := info.Sys().(*syscall.Stat_t)
+			if ok && userCtx != nil {
+				if userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode) {
+					isDangerous = true
+					riskLevel = "CRITICAL"
+					reason = fmt.Sprintf("Cron executes a WRITABLE target: %s", target)
+					break
+				}
+				// If target is owned by non-root user (e.g. www-data, unprivileged user)
+				if isRoot && stat.Uid != 0 {
+					isDangerous = true
+					riskLevel = "CRITICAL"
+					reason = fmt.Sprintf("Root cron executes target owned by unprivileged user (UID %d): %s", stat.Uid, target)
 					break
 				}
 			}
 		}
 
-		userCtx := GetUserContext()
-		for _, target := range targetPaths {
-			if info, err := os.Stat(target); err == nil {
-				stat, ok := info.Sys().(*syscall.Stat_t)
-				if ok && userCtx != nil && userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode) {
-					isDangerous = true
-					reason = fmt.Sprintf("Cron executes a WRITABLE target: %s", target)
+		// 2. Check writability of parent directory
+		parentDir := filepath.Dir(target)
+		if info, err := os.Stat(parentDir); err == nil {
+			stat, ok := info.Sys().(*syscall.Stat_t)
+			if ok && userCtx != nil && userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode) {
+				isDangerous = true
+				riskLevel = "CRITICAL"
+				reason = fmt.Sprintf("Cron executes target in a WRITABLE directory: %s", parentDir)
+				break
+			}
+		}
+
+		// 3. Suspicious Root Cron heuristics (non-standard paths, hidden scripts, sudo)
+		if isRoot {
+			isSuspiciousLocation := false
+			for _, suspiciousDir := range []string{"/var/www", "/tmp", "/dev/shm", "/var/tmp", "/srv", "/home"} {
+				if strings.HasPrefix(target, suspiciousDir) || strings.HasPrefix(tgt.workingDir, suspiciousDir) {
+					isSuspiciousLocation = true
 					break
 				}
+			}
+
+			isHidden := strings.HasPrefix(targetBase, ".")
+			hasSecretKeyword := strings.Contains(strings.ToLower(command), "secret") ||
+				strings.Contains(strings.ToLower(targetBase), "secret") ||
+				strings.Contains(strings.ToLower(targetBase), "backdoor") ||
+				strings.Contains(strings.ToLower(targetBase), "exploit")
+
+			if isHidden || isSuspiciousLocation || hasSecretKeyword || tgt.hasSudo {
+				isDangerous = true
+				riskLevel = "CRITICAL"
+				var details []string
+				if isHidden {
+					details = append(details, "hidden script execution")
+				}
+				if isSuspiciousLocation {
+					loc := target
+					if tgt.workingDir != "" {
+						loc = tgt.workingDir
+					}
+					details = append(details, fmt.Sprintf("non-standard/web directory: %s", loc))
+				}
+				if hasSecretKeyword {
+					details = append(details, "suspicious script keyword")
+				}
+				if tgt.hasSudo {
+					details = append(details, "invokes sudo from root")
+				}
+				reason = fmt.Sprintf("Root cron executes anomalous task: %s", strings.Join(details, ", "))
+				break
 			}
 		}
 	}
 
 	// Check for Wildcard Injection vectors (Critical finding)
-	vulnerableCmds := []string{"tar", "chown", "chmod", "rsync", "7z", "zip", "rar", "7zip"}
-	for _, vulnerableCmd := range vulnerableCmds {
-		// Look for command followed by space and a wildcard
-		pattern := vulnerableCmd + " "
-		if strings.Contains(command, pattern) && strings.Contains(command, "*") {
-			isDangerous = true
-			reason = "Cron executes '" + vulnerableCmd + "' with wildcard (*) - vulnerable to Wildcard Injection"
-			break
+	if !isDangerous {
+		vulnerableCmds := []string{"tar", "chown", "chmod", "rsync", "7z", "zip", "rar", "7zip"}
+		for _, vulnerableCmd := range vulnerableCmds {
+			pattern := vulnerableCmd + " "
+			if strings.Contains(command, pattern) && strings.Contains(command, "*") {
+				isDangerous = true
+				riskLevel = "CRITICAL"
+				reason = "Cron executes '" + vulnerableCmd + "' with wildcard (*) - vulnerable to Wildcard Injection"
+				break
+			}
 		}
 	}
 
@@ -226,8 +388,9 @@ func analyzeCronLine(line string, filePath string, currentUID int) *CronJobResul
 			Schedule:        strings.Join(fields[0:5], " "),
 			Command:         command,
 			IsRootJob:       isRoot,
-			IsPrivilegedJob: isRoot, // Mapping for main.go compatibility
+			IsPrivilegedJob: isRoot,
 			IsDangerous:     isDangerous,
+			RiskLevel:       riskLevel,
 			Reason:          reason,
 			CronFile:        filePath,
 			Remediation:     remediation,

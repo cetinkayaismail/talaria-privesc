@@ -87,6 +87,61 @@ func PrintBanner() {
 	}
 }
 
+// Section represents an atomic output block for a scanner module.
+// Findings added to the section are only rendered if at least one finding exists,
+// and the header + all findings are printed atomically under printMu to prevent
+// interleaving from concurrent goroutines.
+type Section struct {
+	title    string
+	findings []findingEntry
+}
+
+type findingEntry struct {
+	severity string
+	title    string
+	details  map[string]string
+	exploit  string
+}
+
+// NewSection initializes an atomic output section for a module.
+func NewSection(title string) *Section {
+	return &Section{title: title}
+}
+
+// AddFinding queues a finding to be rendered within this section.
+func (s *Section) AddFinding(severity string, title string, details map[string]string, exploit string) {
+	s.findings = append(s.findings, findingEntry{
+		severity: severity,
+		title:    title,
+		details:  details,
+		exploit:  exploit,
+	})
+}
+
+// HasFindings returns true if any findings have been queued.
+func (s *Section) HasFindings() bool {
+	return len(s.findings) > 0
+}
+
+// Len returns the count of queued findings in this section.
+func (s *Section) Len() int {
+	return len(s.findings)
+}
+
+// Flush atomically renders the section header and all queued findings.
+// If no findings were added, nothing is printed (preventing orphaned empty headers).
+func (s *Section) Flush() {
+	if len(s.findings) == 0 {
+		return
+	}
+	printMu.Lock()
+	defer printMu.Unlock()
+	renderSectionHeaderLocked(s.title)
+	for _, f := range s.findings {
+		renderFindingLocked(f.severity, f.title, f.details, f.exploit)
+	}
+}
+
 // PrintSectionHeader prints a stream-friendly or UI-bordered section header
 func PrintSectionHeader(title string) {
 	printMu.Lock()

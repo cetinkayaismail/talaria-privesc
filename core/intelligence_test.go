@@ -256,3 +256,24 @@ func TestChain22_ServiceBlankAuth(t *testing.T) {
 		t.Errorf("expected 0 chain results for safe service, got %d", len(negResults))
 	}
 }
+
+func TestResolveCommandPathCompoundAndSudo(t *testing.T) {
+	cmd := "cd /var/www/ && sudo bash .mysecretcronjob.sh"
+	target := "/var/www/.mysecretcronjob.sh"
+
+	if !resolveCommandPath(cmd, target) {
+		t.Errorf("Expected resolveCommandPath to resolve %q against %q", cmd, target)
+	}
+
+	// Should not match completely different target
+	if resolveCommandPath(cmd, "/var/www/other.sh") {
+		t.Errorf("Expected resolveCommandPath to return false for unreferenced target")
+	}
+
+	// Sudo without cd
+	cmd2 := "sudo python3 /opt/tools/run.py"
+	if !resolveCommandPath(cmd2, "/opt/tools/run.py") {
+		t.Errorf("Expected resolveCommandPath to resolve %q against %q", cmd2, "/opt/tools/run.py")
+	}
+}
+
