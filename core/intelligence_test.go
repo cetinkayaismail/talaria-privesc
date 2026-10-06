@@ -276,4 +276,3 @@ func TestResolveCommandPathCompoundAndSudo(t *testing.T) {
 		t.Errorf("Expected resolveCommandPath to resolve %q against %q", cmd2, "/opt/tools/run.py")
 	}
 }
-

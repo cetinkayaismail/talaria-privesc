@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #105 — CI/CD Formatting Drift Remediation (`core/*`, `scanners/*`)
+**Impact:** 🔧 100% canonical `gofmt` compliance — resolves CI/CD pipeline formatting drift gate
+
+- **FMT-DRIFT-01 — Canonical `gofmt` Alignment (`core/intelligence_test.go`, `core/reporting_test.go`, `scanners/bugfixes_test.go`):** Stripped trailing blank lines in newly introduced unit tests, ensuring full compliance with the GitHub Actions zero-formatting-drift verification step (`diff -u <(echo -n) <(gofmt -d .)`).
+
+**Files changed:** `core/intelligence_test.go`, `core/reporting_test.go`, `scanners/bugfixes_test.go`, `CHANGELOG.md`
+
+---
+
 ### #104 — Multi-Architecture Static Release Engine & Linux ARMv7 Support (`Makefile`, `.github/workflows/release.yml`)
 **Impact:** 🛡️ 100% static, zero-dependency release binaries for all Linux distros (amd64, arm64, armv7, 386)
 

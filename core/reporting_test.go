@@ -167,4 +167,3 @@ func TestSectionBufferingAndFlush(t *testing.T) {
 		t.Errorf("Expected header and finding in section output, got:\n%s", populatedOut)
 	}
 }
-
