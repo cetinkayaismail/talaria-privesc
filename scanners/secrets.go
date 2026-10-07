@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -648,12 +649,18 @@ func previewFirstLine(path string) string {
 		return "[Binary Credential Store / Keyring Database]"
 	}
 
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return ""
 	}
-	for _, line := range strings.SplitN(string(data), "\n", 10) {
-		line = strings.TrimSpace(line)
+	defer f.Close()
+
+	// Bound reading to at most 4KB to avoid memory exhaustion on large files
+	scanner := bufio.NewScanner(io.LimitReader(f, 4096))
+	linesRead := 0
+	for scanner.Scan() && linesRead < 10 {
+		line := strings.TrimSpace(scanner.Text())
+		linesRead++
 		if line != "" {
 			return line
 		}

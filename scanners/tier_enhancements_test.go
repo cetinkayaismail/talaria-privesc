@@ -81,3 +81,43 @@ func TestScanMailSpools(t *testing.T) {
 		t.Errorf("unexpected nil fileResults with non-nil contentResults")
 	}
 }
+
+func TestPreviewFirstLine(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// 1. Text file with leading blank lines
+	txtPath := tmpDir + "/test.conf"
+	content := "\n\n  DB_PASS=SuperSecret123  \nSECOND_LINE=foo\n"
+	if err := os.WriteFile(txtPath, []byte(content), 0600); err != nil {
+		t.Fatalf("failed to write test file: %v", err)
+	}
+
+	preview := previewFirstLine(txtPath)
+	if preview != "DB_PASS=SuperSecret123" {
+		t.Errorf("previewFirstLine(%q) = %q; want %q", txtPath, preview, "DB_PASS=SuperSecret123")
+	}
+
+	// 2. Empty file
+	emptyPath := tmpDir + "/empty.conf"
+	if err := os.WriteFile(emptyPath, []byte(""), 0600); err != nil {
+		t.Fatalf("failed to write empty file: %v", err)
+	}
+	if p := previewFirstLine(emptyPath); p != "" {
+		t.Errorf("expected empty preview for empty file, got %q", p)
+	}
+
+	// 3. Binary credential database suffix
+	kdbxPath := tmpDir + "/passwords.kdbx"
+	if err := os.WriteFile(kdbxPath, []byte("fake binary kdbx content"), 0600); err != nil {
+		t.Fatalf("failed to write kdbx file: %v", err)
+	}
+	expectedDesc := "[Binary Credential Store / Keyring Database]"
+	if p := previewFirstLine(kdbxPath); p != expectedDesc {
+		t.Errorf("previewFirstLine(%q) = %q; want %q", kdbxPath, p, expectedDesc)
+	}
+
+	// 4. Non-existent file
+	if p := previewFirstLine(tmpDir + "/does_not_exist.txt"); p != "" {
+		t.Errorf("expected empty preview for non-existent file, got %q", p)
+	}
+}

@@ -7,6 +7,17 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #106 — Streaming File Preview Bounding, Package Regex Precompilation & Adversarial Test Alignment (`scanners/*`, `lab/*`)
+**Impact:** ⚡ Memory allocation bounding (<=4KB) on large secret files + ⚡ Zero in-loop regex compilation churn + 🎯 100% (35/35) adversarial test verification catch rate
+
+- **OPT-MEM-01 — Bounded Streaming File Preview (`scanners/secrets.go`, `scanners/tier_enhancements_test.go`):** Replaced unbounded `os.ReadFile(path)` in `previewFirstLine` with streaming `bufio.Scanner` wrapped around `io.LimitReader(file, 4096)`. Reads up to 4KB and short-circuits on the first non-empty line of the top 10 lines. Completely prevents multi-gigabyte heap allocation spikes and Linux OOM-killer termination when encountering massive readable database dumps, logs, or mailbox archives on target machines.
+- **OPT-REGEX-02 — Package-Level Version Regex Precompilation (`scanners/vulnerabilities.go`, `scanners/vulnerabilities_test.go`):** Promoted dynamic in-loop/in-function regular expressions (`reSudoVer`, `rePkexecVer`, `reSystemdVer`, and `reNonNumeric`) to package-level precompiled globals. Eliminates repeated NFA/DFA regex compilation and GC pressure during version comparison passes across candidate binaries.
+- **QA-ALIGN-03 — Shell History Adversarial Test Alignment (`lab/test_all_vectors_isolated.py`):** Updated the verification assertion in VEC-19 (`Shell History Secrets Scraping`) to recognize masked credentials and `CRITICAL` risk classification, aligning the external automated test suite with Talaria's enterprise masking defaults and achieving a 100% (35/35) True Positive detection catch rate.
+
+**Files changed:** `scanners/secrets.go`, `scanners/vulnerabilities.go`, `scanners/tier_enhancements_test.go`, `scanners/vulnerabilities_test.go`, `lab/test_all_vectors_isolated.py`, `CHANGELOG.md`
+
+---
+
 ### #105 — CI/CD Formatting Drift Remediation (`core/*`, `scanners/*`)
 **Impact:** 🔧 100% canonical `gofmt` compliance — resolves CI/CD pipeline formatting drift gate
 

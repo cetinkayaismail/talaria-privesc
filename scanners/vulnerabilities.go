@@ -12,6 +12,13 @@ import (
 	"time"
 )
 
+var (
+	reSudoVer    = regexp.MustCompile(`Sudo version (\d+\.\d+[\.\d]*)`)
+	rePkexecVer  = regexp.MustCompile(`pkexec version (\d+\.\d+[\.\d]*)`)
+	reSystemdVer = regexp.MustCompile(`systemd (\d+)`)
+	reNonNumeric = regexp.MustCompile(`[^0-9.]`)
+)
+
 // --- Structs ---
 
 type VersionInfo struct {
@@ -340,7 +347,7 @@ func ScanSystemVersions(_ ...time.Duration) ([]VersionInfo, error) {
 		_ = data
 	}
 	// Try sudo -V via reading output (non-interactive)
-	sudoVer := readBinaryVersion("sudo", "-V", `Sudo version (\d+\.\d+[\.\d]*)`)
+	sudoVer := readBinaryVersion("sudo", "-V", reSudoVer)
 	if sudoVer != "" {
 		isDangerous := compareVersionParsed(sudoVer, "1.9.5") <= 0
 		remediation := ""
@@ -357,7 +364,7 @@ func ScanSystemVersions(_ ...time.Duration) ([]VersionInfo, error) {
 	}
 
 	// 3. pkexec (Polkit) — CVE-2021-4034 PwnKit
-	pkexecVer := readBinaryVersion("pkexec", "--version", `pkexec version (\d+\.\d+[\.\d]*)`)
+	pkexecVer := readBinaryVersion("pkexec", "--version", rePkexecVer)
 	if pkexecVer != "" {
 		isDangerous := compareVersionParsed(pkexecVer, "0.120") <= 0
 		remediation := ""
@@ -386,7 +393,7 @@ func ScanSystemVersions(_ ...time.Duration) ([]VersionInfo, error) {
 
 	// 4. Systemd version — CVE-2026-4105 / CVE-2026-40224
 	// systemctl --version typically outputs "systemd 255 (255.4-1ubuntu3)"
-	systemdVer := readBinaryVersion("systemctl", "--version", `systemd (\d+)`)
+	systemdVer := readBinaryVersion("systemctl", "--version", reSystemdVer)
 	if systemdVer != "" {
 		verNum, _ := strconv.Atoi(systemdVer)
 		// Both CVEs primarily affect version 259
@@ -594,8 +601,8 @@ func runWithTimeout(binary, arg string) string {
 	return string(out)
 }
 
-// readBinaryVersion runs a binary with given args and extracts version using regex.
-func readBinaryVersion(binary, arg, pattern string) string {
+// readBinaryVersion runs a binary with given args and extracts version using a pre-compiled regex.
+func readBinaryVersion(binary, arg string, re *regexp.Regexp) string {
 	candidates := []string{
 		"/usr/bin/" + binary,
 		"/bin/" + binary,
@@ -607,7 +614,6 @@ func readBinaryVersion(binary, arg, pattern string) string {
 		}
 		out := runWithTimeout(candidate, arg)
 		if out != "" {
-			re := regexp.MustCompile(pattern)
 			if m := re.FindStringSubmatch(out); len(m) > 1 {
 				return m[1]
 			}
@@ -643,8 +649,8 @@ func compareVersionParsed(v1, v2 string) int {
 }
 
 func parseVersion(v string) []int {
-	// Strip non-numeric prefix parts like "p2" suffix
-	clean := regexp.MustCompile(`[^0-9.]`).ReplaceAllString(v, ".")
+	// Strip non-numeric prefix parts like "p2" suffix using pre-compiled regex
+	clean := reNonNumeric.ReplaceAllString(v, ".")
 	parts := strings.Split(strings.Trim(clean, "."), ".")
 	var res []int
 	for _, p := range parts {

@@ -91,3 +91,26 @@ func TestCheckKernelRange_NegativeBoundary_OutOfRange(t *testing.T) {
 		t.Errorf("expected 0 vulnerabilities for future kernel 9.99.99, got %d", len(vulns))
 	}
 }
+
+func TestParseVersionAndCompare(t *testing.T) {
+	tests := []struct {
+		v1       string
+		v2       string
+		expected int
+	}{
+		{"1.9.5", "1.9.5p2", -1},
+		{"1.9.5p2", "1.9.5", 1},
+		{"1.9.4", "1.9.5", -1},
+		{"1.9.5.1", "1.9.5", 1},
+		{"0.120", "0.120", 0},
+		{"0.119", "0.120", -1},
+		{"255", "259", -1},
+	}
+
+	for _, tt := range tests {
+		cmp := compareVersionParsed(tt.v1, tt.v2)
+		if cmp != tt.expected {
+			t.Errorf("compareVersionParsed(%q, %q) = %d; want %d", tt.v1, tt.v2, cmp, tt.expected)
+		}
+	}
+}
