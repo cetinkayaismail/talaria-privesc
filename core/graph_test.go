@@ -151,16 +151,13 @@ func TestFindPathsAndBestSinglePass(t *testing.T) {
 		t.Fatalf("Expected best path through node:stepB, got %+v", bestPath)
 	}
 
-	// Verify FindPaths wrapper matches allPaths
-	pathsOnly := g.FindPaths("user:test", "goal:root", 5)
-	if len(pathsOnly) != 2 {
-		t.Fatalf("Expected FindPaths to return 2 paths, got %d", len(pathsOnly))
+	// Verify the combined call returns consistent results when called again
+	allPaths2, bestPath2 := g.FindPathsAndBest("user:test", "goal:root", 5)
+	if len(allPaths2) != 2 {
+		t.Fatalf("Expected FindPathsAndBest to return 2 paths on second call, got %d", len(allPaths2))
 	}
-
-	// Verify FindBestPath wrapper matches bestPath
-	bestOnly := g.FindBestPath("user:test", "goal:root", 5)
-	if len(bestOnly) != 2 || bestOnly[0].To.ID != "node:stepB" {
-		t.Fatalf("Expected FindBestPath to return path through stepB, got %+v", bestOnly)
+	if len(bestPath2) != 2 || bestPath2[0].To.ID != "node:stepB" {
+		t.Fatalf("Expected FindPathsAndBest best path through stepB on second call, got %+v", bestPath2)
 	}
 }
 
@@ -210,7 +207,7 @@ func TestSysctlHardeningNotDirectAttackPath(t *testing.T) {
 	}
 
 	// DFS search must find 0 paths to goal:root
-	paths := g.FindPaths("user:pentester", "goal:root", 5)
+	paths, _ := g.FindPathsAndBest("user:pentester", "goal:root", 5)
 	if len(paths) != 0 {
 		t.Fatalf("Expected 0 attack paths to goal:root from standalone sysctls, got %d", len(paths))
 	}

@@ -794,14 +794,3 @@ func (g *Graph) FindPathsAndBest(startID, targetID string, maxDepth int) ([][]Ed
 	return allPaths, bestPath
 }
 
-// FindBestPath finds the highest-weighted path from start to target using single-pass traversal.
-func (g *Graph) FindBestPath(startID, targetID string, maxDepth int) []Edge {
-	_, best := g.FindPathsAndBest(startID, targetID, maxDepth)
-	return best
-}
-
-// FindPaths finds all paths from startID to targetID up to maxDepth using single-pass traversal.
-func (g *Graph) FindPaths(startID, targetID string, maxDepth int) [][]Edge {
-	paths, _ := g.FindPathsAndBest(startID, targetID, maxDepth)
-	return paths
-}

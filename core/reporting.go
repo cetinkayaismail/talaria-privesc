@@ -118,16 +118,6 @@ func (s *Section) AddFinding(severity string, title string, details map[string]s
 	})
 }
 
-// HasFindings returns true if any findings have been queued.
-func (s *Section) HasFindings() bool {
-	return len(s.findings) > 0
-}
-
-// Len returns the count of queued findings in this section.
-func (s *Section) Len() int {
-	return len(s.findings)
-}
-
 // Flush atomically renders the section header and all queued findings.
 // If no findings were added, nothing is printed (preventing orphaned empty headers).
 func (s *Section) Flush() {
