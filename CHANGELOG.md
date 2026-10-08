@@ -12,7 +12,7 @@ This release introduces 16 major improvements including: a completely modernized
 
 - **TEST-PORT-01 — Dynamic Process UID/GID Resolution in Unit Tests (`scanners/docker_socket_test.go`, `scanners/tmpfiles_d_test.go`):** Replaced hardcoded `UID: 1000` in unit test user contexts with dynamic `os.Getuid()` / `os.Getgid()`. In GitHub Actions and Linux CI runners, processes execute as non-standard UIDs (e.g., `runner` UID 1001), causing file ownership mismatch against hardcoded mocks.
 
-**Files changed:** `scanners/docker_socket_test.go`, `scanners/tmpfiles_d_test.go`
+**Files changed:** `scanners/docker_socket_test.go`, `scanners/tmpfiles_d_test.go` *(commit 84abc08)*
 
 ---
 
