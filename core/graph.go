@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"talaria/models"
 )
@@ -146,6 +147,14 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 			g.AddNode(sockID, "File")
 			g.AddEdgeWeight(currentUser, sockID, "Can access Docker socket", 9)
 			g.AddEdgeWeight(sockID, "goal:root", "Docker socket provides trivial root access", 10)
+		}
+	}
+	for _, ds := range report.DockerSockets {
+		if ds.IsDangerous {
+			sockID := fmt.Sprintf("sock:%s", filepath.Base(ds.Path))
+			g.AddNode(sockID, "File")
+			g.AddEdgeWeight(currentUser, sockID, "Can access host container daemon socket", 9)
+			g.AddEdgeWeight(sockID, "goal:root", "Container socket provides trivial root access", 10)
 		}
 	}
 
@@ -331,6 +340,17 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 		g.AddNode(ovID, "File")
 		g.AddEdgeWeight(currentUser, ovID, fmt.Sprintf("Can access Systemd override %s (%s)", ov.Path, ov.Type), 9)
 		g.AddEdgeWeight(ovID, "goal:root", fmt.Sprintf("Systemd override for service %s grants root code execution", ov.ServiceName), 10)
+	}
+
+	// Map systemd-tmpfiles drop-ins & configurations
+	for _, tf := range report.TmpfilesD {
+		if !tf.IsDangerous {
+			continue
+		}
+		tfID := fmt.Sprintf("tmpfile:%s", tf.Path)
+		g.AddNode(tfID, "File")
+		g.AddEdgeWeight(currentUser, tfID, fmt.Sprintf("Can abuse systemd-tmpfiles (%s)", tf.Type), 8)
+		g.AddEdgeWeight(tfID, "goal:root", "systemd-tmpfiles executes as root creating or modifying system files", 9)
 	}
 
 	// 18. Map SubUID / Unprivileged User Namespaces

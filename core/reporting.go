@@ -507,6 +507,12 @@ func PrintSummary(report *models.ScanReport, duration string) {
 	for _, x := range report.Xinetd {
 		countRisk(x.RiskLevel)
 	}
+	for _, d := range report.DockerSockets {
+		countRisk(d.RiskLevel)
+	}
+	for _, t := range report.TmpfilesD {
+		countRisk(t.RiskLevel)
+	}
 
 	modeStr := "CTF / OFFENSIVE"
 	if Config.Mode == ModeAudit {

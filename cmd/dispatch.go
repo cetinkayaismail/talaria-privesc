@@ -1769,6 +1769,68 @@ func BuildModuleRegistry() []ModuleDescriptor {
 				return nil
 			},
 		},
+		{
+			Name:    "docker_socket",
+			Aliases: []string{"dockersocket", "docker_sock"},
+			Phase:   1,
+			NeedsIO: false,
+			Run: func(ctx *DispatchContext) error {
+				results, err := scanners.ScanDockerSocket()
+				if err == nil && len(results) > 0 {
+					ctx.Mu.Lock()
+					ctx.Report.DockerSockets = results
+					ctx.Mu.Unlock()
+					core.PrintSectionHeader("Host Container Daemon Sockets Audit")
+					for _, r := range results {
+						hint := ""
+						if !ctx.Config.AuditMode {
+							hint = r.ExploitHint
+						}
+						core.PrintFinding(r.RiskLevel, "Container Daemon Socket Accessible", map[string]string{
+							"Path":     r.Path,
+							"Type":     r.Type,
+							"OwnerUID": strconv.Itoa(r.SocketOwnerUID),
+							"Reason":   r.Reason,
+						}, hint)
+					}
+				}
+				return nil
+			},
+		},
+		{
+			Name:    "tmpfiles_d",
+			Aliases: []string{"tmpfiles", "systemd_tmpfiles"},
+			Phase:   1,
+			NeedsIO: true,
+			Run: func(ctx *DispatchContext) error {
+				results, err := scanners.ScanTmpfilesD()
+				if err == nil && len(results) > 0 {
+					ctx.Mu.Lock()
+					ctx.Report.TmpfilesD = results
+					ctx.Mu.Unlock()
+					core.PrintSectionHeader("systemd-tmpfiles Configuration & Drop-ins Audit")
+					for _, r := range results {
+						hint := ""
+						if !ctx.Config.AuditMode {
+							hint = r.ExploitHint
+						}
+						fields := map[string]string{
+							"Path":   r.Path,
+							"Type":   r.Type,
+							"Reason": r.Reason,
+						}
+						if r.Target != "" {
+							fields["Target"] = r.Target
+						}
+						if r.Directive != "" {
+							fields["Directive"] = r.Directive
+						}
+						core.PrintFinding(r.RiskLevel, "systemd-tmpfiles Vulnerability", fields, hint)
+					}
+				}
+				return nil
+			},
+		},
 	}
 }
 

@@ -80,6 +80,7 @@ func init() {
 		&SubUIDNamespaceChain{},       // #48 SubUID / SubGID User Namespace Mapping chain
 		&NfsLocalMountChain{},         // #49 NFS No-Root-Squash Local Mount chain
 		&ShmSuidDeliveryChain{},       // #50 Insecure Shared Memory / Tempfs SUID Delivery chain
+		&TmpfilesDropinChain{},        // #51 systemd-tmpfiles Drop-In & Directive Hijack chain
 	}
 }
 
@@ -672,7 +673,7 @@ func (c *PtraceRootChain) Evaluate(report *models.ScanReport) []ChainResult {
 type DockerSocketGroupChain struct{}
 
 func (c *DockerSocketGroupChain) Evaluate(report *models.ScanReport) []ChainResult {
-	hasDockerSocket := false
+	hasDockerSocket := len(report.DockerSockets) > 0
 	for _, sock := range report.Sockets {
 		if strings.Contains(sock.Service, "docker") && sock.IsDangerous {
 			hasDockerSocket = true
@@ -685,10 +686,14 @@ func (c *DockerSocketGroupChain) Evaluate(report *models.ScanReport) []ChainResu
 		}
 	}
 	if hasDockerSocket || hasDockerGroup {
+		exploit := "docker run -v /:/mnt --rm -it alpine chroot /mnt sh"
+		if len(report.DockerSockets) > 0 && report.DockerSockets[0].ExploitHint != "" {
+			exploit = report.DockerSockets[0].ExploitHint
+		}
 		return []ChainResult{{
 			Name:      fmt.Sprintf("Docker socket accessible (group=%v, socket=%v)", hasDockerGroup, hasDockerSocket),
 			RiskLevel: "100% CONFIRMED",
-			Exploit:   "docker run -v /:/mnt --rm -it alpine chroot /mnt sh",
+			Exploit:   exploit,
 		}}
 	}
 	return nil
@@ -2159,6 +2164,28 @@ func (c *ShmSuidDeliveryChain) Evaluate(report *models.ScanReport) []ChainResult
 				MitreID:     "T1548.001",
 			})
 		}
+	}
+	return results
+}
+
+// ── CHAIN 51: systemd-tmpfiles drop-in or directive hijacking ──────────────
+type TmpfilesDropinChain struct{}
+
+func (c *TmpfilesDropinChain) Evaluate(report *models.ScanReport) []ChainResult {
+	var results []ChainResult
+	for _, tf := range report.TmpfilesD {
+		if !tf.IsDangerous {
+			continue
+		}
+		results = append(results, ChainResult{
+			Name:        fmt.Sprintf("systemd-tmpfiles Privilege Escalation (%s)", tf.Type),
+			Description: tf.Reason,
+			RiskLevel:   tf.RiskLevel,
+			Exploit:     tf.ExploitHint,
+			TargetPath:  tf.Path,
+			TriggerType: "⏰ SCHEDULED",
+			MitreID:     "T1543.002",
+		})
 	}
 	return results
 }

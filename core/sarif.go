@@ -494,6 +494,34 @@ func GenerateSARIFReport(report *models.ScanReport) ([]byte, error) {
 		)
 	}
 
+	for _, ds := range report.DockerSockets {
+		if !ds.IsDangerous {
+			continue
+		}
+		msg := fmt.Sprintf("Accessible container daemon socket '%s': %s", ds.Path, ds.Reason)
+		builder.addResult(
+			"TAL-DOCKER-001", "AccessibleDockerSocket",
+			"Accessible container daemon socket allows root filesystem takeover",
+			"The Docker/Container UNIX domain socket is writable or accessible by an unprivileged user, granting root access via container mounts.",
+			ds.RiskLevel, ds.Path, msg, ds.Remediation, ds.ComplianceTag, ds.ExploitHint,
+			[]string{"security", "privilege-escalation", "docker", "containers"},
+		)
+	}
+
+	for _, tf := range report.TmpfilesD {
+		if !tf.IsDangerous {
+			continue
+		}
+		msg := fmt.Sprintf("systemd-tmpfiles misconfiguration '%s' (%s): %s", tf.Path, tf.Type, tf.Reason)
+		builder.addResult(
+			"TAL-TMPF-001", "InsecureTmpfilesDropin",
+			"systemd-tmpfiles configuration allows root privilege escalation",
+			"A writable systemd-tmpfiles configuration or insecure directive allows an unprivileged user to modify root-owned system files.",
+			tf.RiskLevel, tf.Path, msg, tf.Remediation, tf.ComplianceTag, tf.ExploitHint,
+			[]string{"security", "privilege-escalation", "systemd", "tmpfiles"},
+		)
+	}
+
 	// Build Invocations with Enterprise Summary Metrics
 	invocations := []SARIFInvocation{
 		{

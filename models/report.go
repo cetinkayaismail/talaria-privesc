@@ -62,4 +62,6 @@ type ScanReport struct {
 	SnapAudit          []scanners.SnapAuditResult         `json:"snap_audit,omitempty"`
 	GitHooks           []scanners.GitHookResult           `json:"git_hooks,omitempty"`
 	Xinetd             []scanners.XinetdResult            `json:"xinetd,omitempty"`
+	DockerSockets      []scanners.DockerSocketResult      `json:"docker_sockets,omitempty"`
+	TmpfilesD          []scanners.TmpfilesResult          `json:"tmpfiles_d,omitempty"`
 }
