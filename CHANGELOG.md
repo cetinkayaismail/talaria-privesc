@@ -15,7 +15,7 @@ This release introduces 16 major improvements including: a completely modernized
 - **CHAIN-51 — Attack Chains & DAG Integration (`core/intelligence.go`, `core/graph.go`):** Added Attack Chain #51 (`systemd-tmpfiles Drop-In & Directive Hijack chain`) mapped to MITRE T1543.002, updated DockerSocketGroupChain to synthesize custom GTFOBins exploit commands, and added directed graph edges for container daemon sockets and tmpfiles configurations targeting `goal:root`.
 - **SARIF & Compliance Standards (`core/sarif.go`, `core/reporting.go`, `models/report.go`):** Added SARIF v2.1.0 rules `TAL-DOCKER-001` (CIS-Docker-2.1 / NIST-AC-6) and `TAL-TMPF-001` (CIS-Linux-1.1 / NIST-CM-6) with enterprise risk scoring and terminal reporting counters.
 
-**Files changed:** `scanners/docker_socket.go` *(new)*, `scanners/docker_socket_test.go` *(new)*, `scanners/tmpfiles_d.go` *(new)*, `scanners/tmpfiles_d_test.go` *(new)*, `cmd/dispatch.go`, `core/graph.go`, `core/intelligence.go`, `core/reporting.go`, `core/sarif.go`, `models/report.go`
+**Files changed:** `scanners/docker_socket.go` *(new)*, `scanners/docker_socket_test.go` *(new)*, `scanners/tmpfiles_d.go` *(new)*, `scanners/tmpfiles_d_test.go` *(new)*, `cmd/dispatch.go`, `core/graph.go`, `core/intelligence.go`, `core/reporting.go`, `core/sarif.go`, `models/report.go` *(commit 5f06651)*
 
 ---
 
