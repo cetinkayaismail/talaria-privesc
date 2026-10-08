@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #111 — CI/CD Canonical Formatting Drift Fix (`core/graph.go`, `scanners/container.go`)
+**Impact:** 🔧 100% canonical `gofmt` compliance — resolves CI/CD `Check Formatting` pipeline failure
+
+- **CI-FMT-01 — Elimination of Trailing Blank Line and Struct Field Alignment Drift (`core/graph.go`, `scanners/container.go`):** Resolved formatting drift detected by GitHub Actions CI pipeline step `diff -u <(echo -n) <(gofmt -d .)`. Pruned extra trailing newline in `core/graph.go` and normalized tab-aligned struct literal fields in `scanners/container.go`.
+
+**Files changed:** `core/graph.go`, `scanners/container.go`
+
+---
+
 ### #110 — Host Docker Socket & systemd-tmpfiles Scanners (`scanners/docker_socket.go`, `scanners/tmpfiles_d.go`, `cmd/dispatch.go`, `core/graph.go`, `core/intelligence.go`, `core/sarif.go`, `models/report.go`)
 **Impact:** 🎯 2 new detection vectors — Host container daemon socket exposure (100% deterministic root) & systemd-tmpfiles drop-in/directive hijacking; ⚡ sub-2ms combined runtime; 📉 0% false positives with rootless socket exclusions.
 

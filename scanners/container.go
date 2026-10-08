@@ -307,14 +307,14 @@ func ScanDBusPolicy() ([]DBusPolicyResult, error) {
 			}
 			if userCtx.CanWrite(int(stat.Uid), int(stat.Gid), stat.Mode) {
 				results = append(results, DBusPolicyResult{
-					ConfigFile:    filePath,
-					ServiceName:   serviceName,
-					RiskLevel:     "CRITICAL",
-					IsDangerous:   true,
+					ConfigFile:     filePath,
+					ServiceName:    serviceName,
+					RiskLevel:      "CRITICAL",
+					IsDangerous:    true,
 					ServiceRunning: isDBusServiceRunning(snap, serviceName),
-					Reason:        fmt.Sprintf("D-Bus policy file '%s' is writable by current user — can inject allow rules to gain unrestricted access to privileged service methods", filePath),
-					Remediation:   fmt.Sprintf("chown root:root %s && chmod 0644 %s", filePath, filePath),
-					ComplianceTag: "CIS-Linux-5.3.5 / NIST-CM-6",
+					Reason:         fmt.Sprintf("D-Bus policy file '%s' is writable by current user — can inject allow rules to gain unrestricted access to privileged service methods", filePath),
+					Remediation:    fmt.Sprintf("chown root:root %s && chmod 0644 %s", filePath, filePath),
+					ComplianceTag:  "CIS-Linux-5.3.5 / NIST-CM-6",
 				})
 				continue // No need to also parse the content
 			}
