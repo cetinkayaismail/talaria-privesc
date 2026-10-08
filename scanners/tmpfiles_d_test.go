@@ -13,10 +13,12 @@ func TestTmpfilesDAudit(t *testing.T) {
 		t.Fatalf("Failed to create test directory: %v", err)
 	}
 
+	currUID := os.Getuid()
+	currGID := os.Getgid()
 	userCtx := &UserContext{
-		UID:  1000,
-		GID:  1000,
-		GIDs: map[int]bool{1000: true},
+		UID:  currUID,
+		GID:  currGID,
+		GIDs: map[int]bool{currGID: true},
 	}
 
 	// 1. Positive Test: Writable .conf file
@@ -67,9 +69,9 @@ f /run/motd.dynamic 0644 root root - -
 	}
 
 	userCtxOther := &UserContext{
-		UID:  2000,
-		GID:  2000,
-		GIDs: map[int]bool{2000: true},
+		UID:  currUID + 9999,
+		GID:  currGID + 9999,
+		GIDs: map[int]bool{currGID + 9999: true},
 	}
 
 	safeResults := scanTmpfilesInternal([]string{safeDir}, userCtxOther)

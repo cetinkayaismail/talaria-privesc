@@ -18,10 +18,12 @@ func TestDockerSocketEvaluation(t *testing.T) {
 	defer l.Close()
 
 	// Positive Test: User has write access
+	currUID := os.Getuid()
+	currGID := os.Getgid()
 	userCtxWritable := &UserContext{
-		UID:  1000,
-		GID:  1000,
-		GIDs: map[int]bool{1000: true, 999: true}, // 999 could be docker group
+		UID:  currUID,
+		GID:  currGID,
+		GIDs: map[int]bool{currGID: true, 999: true}, // simulated docker group
 	}
 
 	results := scanDockerSocketInternal([]string{sockPath}, userCtxWritable)
@@ -39,9 +41,9 @@ func TestDockerSocketEvaluation(t *testing.T) {
 
 	// Negative Test 1: User has NO write access and NOT in group
 	userCtxNoAccess := &UserContext{
-		UID:  2000,
-		GID:  2000,
-		GIDs: map[int]bool{2000: true},
+		UID:  currUID + 9999,
+		GID:  currGID + 9999,
+		GIDs: map[int]bool{currGID + 9999: true},
 	}
 	// Restrict socket to owner-only so other users cannot write
 	_ = os.Chmod(sockPath, 0600)

@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #112 — CI Environment Test Portability: Dynamic UID/GID Mocking (`scanners/docker_socket_test.go`, `scanners/tmpfiles_d_test.go`)
+**Impact:** 🔧 Test environment portability — fixes CI test failure where runner UID != 1000
+
+- **TEST-PORT-01 — Dynamic Process UID/GID Resolution in Unit Tests (`scanners/docker_socket_test.go`, `scanners/tmpfiles_d_test.go`):** Replaced hardcoded `UID: 1000` in unit test user contexts with dynamic `os.Getuid()` / `os.Getgid()`. In GitHub Actions and Linux CI runners, processes execute as non-standard UIDs (e.g., `runner` UID 1001), causing file ownership mismatch against hardcoded mocks.
+
+**Files changed:** `scanners/docker_socket_test.go`, `scanners/tmpfiles_d_test.go`
+
+---
+
 ### #111 — CI/CD Canonical Formatting Drift Fix (`core/graph.go`, `scanners/container.go`)
 **Impact:** 🔧 100% canonical `gofmt` compliance — resolves CI/CD `Check Formatting` pipeline failure
 
