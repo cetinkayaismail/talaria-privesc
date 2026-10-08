@@ -7,6 +7,15 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #107 — Decouple Standalone Sysctls from goal:root in Attack Graph (`core/graph.go`, `core/graph_test.go`)
+**Impact:** 📉 False positive reduction — eliminates phantom "100% CONFIRMED" attack paths to root from standalone sysctl hardening gaps (`fs.suid_dumpable`, `kernel.kptr_restrict`, etc.)
+
+- **GRAPH-FP-01 — Decouple Standalone Sysctls from goal:root in Attack Graph (`core/graph.go`, `core/graph_test.go`):** Previously, all dangerous sysctl findings (e.g., `fs.suid_dumpable`, `kernel.kptr_restrict`, `kernel.dmesg_restrict`) were mapped with a direct edge to `goal:root` with weight 8. In graph traversal synthesis, this generated phantom 2-step attack paths labeled "100% CONFIRMED" to root even though standalone sysctl gaps are passive posture and reconnaissance enablers rather than autonomous execution vectors. Removed the direct `goal:root` edge while preserving sysctls as informational nodes reachable from `currentUser` for audit visibility. Added unit test `TestSysctlHardeningNotDirectAttackPath` in `core/graph_test.go` asserting 0 attack paths to root from standalone sysctls.
+
+**Files changed:** `core/graph.go`, `core/graph_test.go`, `CHANGELOG.md`
+
+---
+
 ### #106 — Streaming File Preview Bounding, Package Regex Precompilation & Adversarial Test Alignment (`scanners/*`, `lab/*`)
 **Impact:** ⚡ Memory allocation bounding (<=4KB) on large secret files + ⚡ Zero in-loop regex compilation churn + 🎯 100% (35/35) adversarial test verification catch rate
 

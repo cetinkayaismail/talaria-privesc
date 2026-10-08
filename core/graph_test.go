@@ -163,3 +163,55 @@ func TestFindPathsAndBestSinglePass(t *testing.T) {
 		t.Fatalf("Expected FindBestPath to return path through stepB, got %+v", bestOnly)
 	}
 }
+
+func TestSysctlHardeningNotDirectAttackPath(t *testing.T) {
+	report := &models.ScanReport{
+		TargetUser: "pentester",
+		SysctlResults: []scanners.SysctlResult{
+			{
+				Key:          "fs.suid_dumpable",
+				CurrentValue: "1",
+				ExpectedVal:  "0",
+				IsDangerous:  true,
+				Reason:       "SUID core dumps enabled — unprivileged user may read memory/credentials from SUID core dump",
+				RiskLevel:    "HIGH",
+			},
+			{
+				Key:          "kernel.kptr_restrict",
+				CurrentValue: "0",
+				ExpectedVal:  "1, 2",
+				IsDangerous:  true,
+				Reason:       "Kernel pointers exposed in /proc — aids kernel exploit ROP/payload alignment",
+				RiskLevel:    "MEDIUM",
+			},
+		},
+	}
+
+	g := BuildIntelligenceGraph(report)
+
+	// Sysctl nodes should exist for audit visibility
+	if _, exists := g.Nodes["sysctl:fs.suid_dumpable"]; !exists {
+		t.Fatal("Expected node sysctl:fs.suid_dumpable to exist")
+	}
+	if _, exists := g.Nodes["sysctl:kernel.kptr_restrict"]; !exists {
+		t.Fatal("Expected node sysctl:kernel.kptr_restrict to exist")
+	}
+
+	// But there should be NO edges from any sysctl node to goal:root
+	for _, edge := range g.Edges["sysctl:fs.suid_dumpable"] {
+		if edge.To.ID == "goal:root" {
+			t.Fatalf("Unexpected direct attack path edge from sysctl:fs.suid_dumpable to goal:root: %+v", edge)
+		}
+	}
+	for _, edge := range g.Edges["sysctl:kernel.kptr_restrict"] {
+		if edge.To.ID == "goal:root" {
+			t.Fatalf("Unexpected direct attack path edge from sysctl:kernel.kptr_restrict to goal:root: %+v", edge)
+		}
+	}
+
+	// DFS search must find 0 paths to goal:root
+	paths := g.FindPaths("user:pentester", "goal:root", 5)
+	if len(paths) != 0 {
+		t.Fatalf("Expected 0 attack paths to goal:root from standalone sysctls, got %d", len(paths))
+	}
+}

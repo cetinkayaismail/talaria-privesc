@@ -310,6 +310,9 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 	}
 
 	// 16. Map Kernel Sysctl Hardening Gaps
+	// Sysctl deviations (e.g. fs.suid_dumpable, kernel.kptr_restrict) are defensive posture gaps / enablers,
+	// not standalone execution paths to root. We map them as informational nodes reachable from currentUser
+	// without a direct edge to goal:root, preventing false-positive attack paths in DFS synthesis.
 	for _, sys := range report.SysctlResults {
 		if !sys.IsDangerous {
 			continue
@@ -317,7 +320,6 @@ func BuildIntelligenceGraph(report *models.ScanReport) *Graph {
 		sysID := fmt.Sprintf("sysctl:%s", sys.Key)
 		g.AddNode(sysID, "File")
 		g.AddEdgeWeight(currentUser, sysID, fmt.Sprintf("Unprotected sysctl %s = %s", sys.Key, sys.CurrentValue), 7)
-		g.AddEdgeWeight(sysID, "goal:root", sys.Reason, 8)
 	}
 
 	// 17. Map Systemd Unit Overrides
