@@ -948,15 +948,26 @@ func BuildModuleRegistry() []ModuleDescriptor {
 					ctx.Report.DBusPolicy = results
 					ctx.Mu.Unlock()
 					if len(results) > 0 {
-						core.PrintSectionHeader("D-Bus Policies")
+						sec := core.NewSection("D-Bus System Policy Audit")
 						for _, r := range results {
-							if r.IsDangerous {
-								core.PrintFinding("CRITICAL", "D-Bus Policy Flaw", map[string]string{
-									"Service": r.ServiceName,
-									"Reason":  r.Reason,
-								}, "")
+							if r.RiskLevel == "INFO" {
+								continue // Suppress INFO from terminal output — available in JSON/SARIF
 							}
+							details := map[string]string{
+								"Service": r.ServiceName,
+								"Config":  r.ConfigFile,
+								"Running": fmt.Sprintf("%v", r.ServiceRunning),
+								"Reason":  r.Reason,
+							}
+							if r.ExploitHint != "" {
+								details["Hint"] = r.ExploitHint
+							}
+							if r.CVENote != "" {
+								details["CVE"] = r.CVENote
+							}
+							sec.AddFinding(r.RiskLevel, "D-Bus Policy Exposure", details, r.ExploitHint)
 						}
+						sec.Flush()
 					}
 				}
 				return nil

@@ -1362,11 +1362,19 @@ func (c *DBusPolicyRootChain) Evaluate(report *models.ScanReport) []ChainResult 
 		if !d.IsDangerous {
 			continue
 		}
+		exploit := d.ExploitHint
+		if exploit == "" {
+			exploit = fmt.Sprintf("dbus-send --system --dest=%s / --print-reply org.freedesktop.DBus.Introspectable.Introspect", d.ServiceName)
+		}
+		riskLabel := "LIKELY"
+		if d.RiskLevel == "CRITICAL" {
+			riskLabel = "100% CONFIRMED"
+		}
 		results = append(results, ChainResult{
-			Name:        fmt.Sprintf("Overly permissive D-Bus Policy for service '%s'", d.ServiceName),
-			RiskLevel:   "100% CONFIRMED",
+			Name:        fmt.Sprintf("D-Bus Policy Exposure — '%s'", d.ServiceName),
+			RiskLevel:   riskLabel,
 			Description: d.Reason,
-			Exploit:     fmt.Sprintf("dbus-send --system --dest=%s ...", d.ServiceName),
+			Exploit:     exploit,
 		})
 	}
 	return results
