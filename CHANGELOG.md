@@ -12,7 +12,7 @@ This release introduces 16 major improvements including: a completely modernized
 
 - **CI-FMT-01 — Elimination of Trailing Blank Line and Struct Field Alignment Drift (`core/graph.go`, `scanners/container.go`):** Resolved formatting drift detected by GitHub Actions CI pipeline step `diff -u <(echo -n) <(gofmt -d .)`. Pruned extra trailing newline in `core/graph.go` and normalized tab-aligned struct literal fields in `scanners/container.go`.
 
-**Files changed:** `core/graph.go`, `scanners/container.go`
+**Files changed:** `core/graph.go`, `scanners/container.go` *(commit fdea8df)*
 
 ---
 
