@@ -7,6 +7,19 @@ This release introduces 16 major improvements including: a completely modernized
 
 ## Detailed Changes
 
+### #108 — Bug Hunt: Unchecked `f.Read()` Fix + Dead Code Pruning (`scanners/fileperms_exploit.go`, `core/graph.go`, `core/graph_test.go`, `core/reporting.go`)
+**Impact:** 🔧 Correctness fix (false-negative shebang detection) + 🔧 Refactor — 4 dead functions pruned, zero API surface lost
+
+- **BUG-1 — Unchecked `f.Read()` in `isLikelyScript()` (`scanners/fileperms_exploit.go:158`):** `f.Read(head)` was called without checking the returned byte count `n` or error. On a 0–1 byte file, `head[1]` would be `\x00`, making `string(head) == "#!"` silently false — a false negative for a 1-byte edge case, and complete suppression of any I/O error. Fixed to `n, err := f.Read(head); if err != nil || n < 2 { return false }`, consistent with the correct `hasShebang()` pattern already in `writeable.go`.
+- **DEAD-1 — `Graph.FindBestPath` + `Graph.FindPaths` (`core/graph.go`):** Both were thin wrappers over `FindPathsAndBest` with zero production callers. `intelligence.go` calls `FindPathsAndBest` directly. Deleted; `graph_test.go` updated to call `FindPathsAndBest` inline.
+- **DEAD-2 — `Section.HasFindings` + `Section.Len` (`core/reporting.go`):** Both were unused API stubs. `Section.Flush()` already gate-checks `len(s.findings) == 0` internally. Deleted to eliminate dead API surface.
+- **RETAINED — `DecryptReport` (`core/crypto.go`):** Tested only, but forms the logical inverse of `EncryptReport`. Kept as a complete symmetric API.
+- **RETAINED — `InvalidateProcSnapshot` (`scanners/proc_snapshot.go`):** Used correctly in tests to reset cached state between runs. Kept.
+
+**Files changed:** `scanners/fileperms_exploit.go`, `core/graph.go`, `core/graph_test.go`, `core/reporting.go` *(commit c5cc08d)*
+
+---
+
 ### #107 — Decouple Standalone Sysctls from goal:root in Attack Graph (`core/graph.go`, `core/graph_test.go`)
 **Impact:** 📉 False positive reduction — eliminates phantom "100% CONFIRMED" attack paths to root from standalone sysctl hardening gaps (`fs.suid_dumpable`, `kernel.kptr_restrict`, etc.)
 
@@ -15,6 +28,8 @@ This release introduces 16 major improvements including: a completely modernized
 **Files changed:** `core/graph.go`, `core/graph_test.go`, `CHANGELOG.md`
 
 ---
+
+
 
 ### #106 — Streaming File Preview Bounding, Package Regex Precompilation & Adversarial Test Alignment (`scanners/*`, `lab/*`)
 **Impact:** ⚡ Memory allocation bounding (<=4KB) on large secret files + ⚡ Zero in-loop regex compilation churn + 🎯 100% (35/35) adversarial test verification catch rate
